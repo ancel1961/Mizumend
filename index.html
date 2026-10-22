@@ -298,6 +298,16 @@ body.photo #hud{display:none}
   *{animation-duration:.01ms!important;transition-duration:.01ms!important}
 }
 #jNews{border:1.5px dashed rgba(92,72,52,.35);border-radius:10px;padding:8px 12px 4px;margin:0 0 14px;background:rgba(255,248,230,.35)}#jNews h2{margin-top:0}#jNews ul{margin:4px 0 6px;padding-left:18px;font-size:14px;line-height:1.4}#jNews li{margin:2px 0}
+.scrap-areas{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin:6px 0 10px}
+.scrap-card{background:rgba(255,250,238,.55);border:1px solid rgba(92,72,52,.25);border-radius:10px;padding:8px 10px}
+.scrap-card h3{margin:0 0 6px;font-weight:normal;font-size:18px}.scrap-card h3 small{font-family:var(--f-hand);color:var(--ink-soft);font-size:14px;margin-left:6px}
+.scrap-pair{display:grid;grid-template-columns:1fr 1fr;gap:8px}.scrap-pair figure{margin:0}
+.scrap-pair img,.scrap-pins img,.scrap-strip img{width:100%;display:block;border:4px solid #fffdf7;box-shadow:0 1px 3px rgba(42,32,23,.3);border-radius:2px;aspect-ratio:16/9;object-fit:cover;background:#d8ccb4}
+.scrap-pair figcaption,.scrap-pins figcaption{font-family:var(--f-hand);font-size:13px;color:var(--ink-soft);margin-top:2px}
+.scrap-empty{aspect-ratio:16/9;border:2px dashed rgba(92,72,52,.3);border-radius:4px;display:grid;place-items:center;text-align:center;font-family:var(--f-hand);font-size:13px;color:var(--ink-soft);padding:6px}
+.scrap-strip{display:flex;gap:6px;margin-top:6px}.scrap-strip figure{margin:0;width:22%}.scrap-strip span{font-size:11px;color:var(--ink-soft)}
+.scrap-pins{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}.scrap-pins figure{margin:0;position:relative}
+.scrap-pins button{position:absolute;top:6px;right:6px;border:0;border-radius:50%;width:22px;height:22px;background:rgba(42,32,23,.65);color:#fff;cursor:pointer;font-size:13px;line-height:22px;padding:0}
 </style>
 
 </head>
@@ -374,6 +384,7 @@ body.photo #hud{display:none}
         <button class="pbtn" id="shotSave" type="button">Save PNG</button>
         <button class="pbtn" id="shotCopy" type="button">Copy image</button>
         <button class="pbtn" id="shotCard" type="button">Make a postcard</button>
+        <button class="pbtn" id="shotPin" type="button">Pin to scrapbook</button>
         <button class="pbtn" id="shotClose" type="button">Back to the camera</button>
       </div>
       <p class="qnote" id="shotNote"></p>
@@ -409,6 +420,7 @@ body.photo #hud{display:none}
       <nav class="jtabs" role="tablist" aria-label="Journal sections">
         <button class="jtab" role="tab" type="button" data-pane="pJournal" aria-selected="true">Journal</button>
         <button class="jtab" role="tab" type="button" data-pane="pCol" aria-selected="false">Collections <small id="colCount"></small></button>
+        <button class="jtab" role="tab" type="button" data-pane="pScrap" aria-selected="false">Scrapbook</button>
         <button class="jtab" role="tab" type="button" data-pane="pValley" aria-selected="false">Valley &amp; settings</button>
       </nav>
       <section class="jpane two" id="pJournal" role="tabpanel">
@@ -428,13 +440,12 @@ body.photo #hud{display:none}
         </div>
         <div class="page">
           <div class="news" id="jNews">
-            <h2>What's new · v7</h2>
+            <h2>What's new · v8</h2>
             <ul>
-              <li>The Reedbeds: weave a basket, a mat and a little reed boat with Mira's frame, then send the boat down the stream to Mill Pond.</li>
-              <li>Six new Reedbed creatures to sketch: three dragonflies, two frogs and a night heron.</li>
-              <li>Winter freezes the pond over. Go for a slide (and fish through the ice).</li>
-              <li>The old cottage is real fieldstone now, ivy and all, and the rebuilt house glows warm after dark.</li>
-              <li>A lantern by the cider press, a gentler waterfall, a starlit pond and leafier orchard trees.</li>
+              <li>A "Then and now" scrapbook (journal → Scrapbook): each place is photographed before you start and again at 25%, 50% and 100% restored. Pin your own photos from the camera too.</li>
+              <li>Warmer nights: glowing windows and lanterns light the ground, fireflies drift by the cottage and the press, and the moon lays a path across the pond.</li>
+              <li>Winter ice you can see from the shore, cracks and sheen and all, with a "Slide" prompt at the edge.</li>
+              <li>Distant trees have light tops and shaded undersides now.</li>
             </ul>
           </div>
           <h2>Today's three small things</h2>
@@ -456,6 +467,13 @@ body.photo #hud{display:none}
         <div class="colhead"><h2>Collections · <span id="colFound">0 of 26</span></h2><div class="row" id="colFilter" style="margin:0"></div></div>
         <div class="colgrid" id="colGrid"></div>
         <p class="qnote" style="margin-top:8px">Fish are caught with a line (hold E by rippling water). Everything else is sketched: look for a soft sparkle in the meadow, on the shore and in the trees, then hold E. Some only appear in certain seasons, weather or hours.</p>
+      </section>
+      <section class="jpane one" id="pScrap" role="tabpanel" hidden>
+        <div class="colhead"><h2>Then and now</h2></div>
+        <p class="qnote">The scrapbook fills itself: each place is photographed from the same spot before you start, and again at 25%, 50% and 100% restored. Pin your own photos from the camera.</p>
+        <div id="scrapAreas" class="scrap-areas"></div>
+        <h2 class="sp">Pinned photos <small id="scrapPinN" style="font-family:var(--f-hand);font-size:15px;color:var(--ink-soft)"></small></h2>
+        <div id="scrapPins" class="scrap-pins"></div>
       </section>
       <section class="jpane two" id="pValley" role="tabpanel" hidden>
         <div class="page">
@@ -1187,9 +1205,11 @@ const water=new THREE.Mesh(new THREE.PlaneGeometry(WORLD,WORLD,1,1).rotateX(-Mat
       body*=uLit;
       { float bl=dot(body,vec3(0.3,0.59,0.11)); body=mix(body,vec3(bl*0.5,bl*0.6,bl*0.85),uNight*0.85)*mix(1.0,0.45,uNight); }
       fres=mix(fres,max(fres,0.62),uNight);
+      float iceHint=uIceN;
       vec3 col=mix(body,skyc,fres);
       { float mdw=max(dot(r,uMoonDir),0.0); float gl=step(0.93,n21(p*vec2(5.0,9.0)+vec2(t*0.6,-t*0.4)));
-        col+=vec3(0.85,0.9,1.0)*(pow(mdw,500.0)*3.5+pow(mdw,40.0)*0.3+gl*pow(mdw,6.0)*0.9)*uNight; }
+        vec3 rf=normalize(vec3(r.x,r.y*3.0,r.z)); float mp=max(dot(rf,normalize(vec3(uMoonDir.x,uMoonDir.y*3.0,uMoonDir.z))),0.0);
+        col+=vec3(0.88,0.92,1.0)*(pow(mdw,400.0)*4.5+pow(mdw,30.0)*0.4+pow(mp,18.0)*0.35+gl*pow(mp,5.0)*1.6)*uNight*(1.0-iceHint); }
       col+=uSunCol*spec*(1.0-uNight*0.85);
       float fn=n21(p*2.5+t*0.25);
       float foam=1.0-smoothstep(0.0,0.2+0.14*fn,depth);
@@ -1198,8 +1218,12 @@ const water=new THREE.Mesh(new THREE.PlaneGeometry(WORLD,WORLD,1,1).rotateX(-Mat
       col=mix(col,vec3(0.94,0.96,1.0)*mix(1.0,0.16,uNight),foam*0.8);
       float iceM=0.0;
       if(uIce>0.01){ float edge=0.5+0.45*n21(p*0.11)+0.25*n21(p*0.6); iceM=uIce*(1.0-smoothstep(edge*0.55,edge,depth)); iceM=max(iceM,uIceN*smoothstep(0.0,0.08,depth)); iceM=clamp(iceM,0.0,1.0);
-        float cr=1.0-(1.0-smoothstep(0.0,0.035,abs(n21(p*0.8)-0.5)))*0.3; vec3 iceC=vec3(0.8,0.87,0.93)*(0.9+0.1*n21(p*2.3))*cr;
-        iceC=iceC*mix(0.13,1.0,uLit)+skyc*0.18+uSunCol*pow(sp,30.0)*0.6; col=mix(col,iceC,iceM); }
+        float c1=1.0-smoothstep(0.0,0.03,abs(n21(p*0.35)-0.5)); float c2=1.0-smoothstep(0.0,0.025,abs(n21(p*0.9+7.0)-0.5));
+        vec3 iceC=mix(vec3(0.5,0.72,0.9),vec3(0.74,0.87,0.97),0.5+0.5*n21(p*0.18))*(0.94+0.06*n21(p*2.3));
+        iceC=mix(iceC,vec3(0.42,0.6,0.78),c1*0.55+c2*0.3);
+        iceC=mix(iceC,vec3(0.97,0.99,1.0),(1.0-smoothstep(0.05,0.6,depth))*0.7);
+        float sheen=pow(max(dot(reflect(-v,vec3(0.0,1.0,0.0)),uSunDir),0.0),16.0)*0.3;float graze=pow(1.0-max(v.y,0.0),4.0);
+        iceC=iceC*mix(0.16,1.0,uLit)*(1.0-graze*0.25)+skyc*(0.08+graze*0.3)+uSunCol*sheen*(1.0-uNight)+vec3(0.5,0.6,0.8)*graze*0.15*uNight; col=mix(col,iceC,iceM); }
       float alpha=mix(0.55,0.94,smoothstep(0.0,1.8,depth))*smoothstep(-0.03,0.05,depth);
       alpha=max(alpha,foam*0.85*smoothstep(-0.03,0.02,depth));
       alpha=mix(alpha,0.97*smoothstep(-0.03,0.03,depth),iceM);
@@ -1415,7 +1439,8 @@ const pollen=(()=>{
 const fireflies=(()=>{
   const N=220,base=new Float32Array(N*3),ph=new Float32Array(N);
   for(let i=0;i<N;i++){
-    let x,z,tries=0;do{const a=rnd()*Math.PI*2,r=rr(POND_R-1,58);x=Math.cos(a)*r;z=Math.sin(a)*r;tries++;}while(groundH(x,z)<-0.4&&tries<20);
+    let x,z,tries=0;if(i<60){const c=i<30?{x:HOME.x,z:HOME.z}:{x:ORCH.x-12.5,z:ORCH.z-11};const a=rnd()*6.28,r=rr(3,11);x=c.x+Math.cos(a)*r;z=c.z+Math.sin(a)*r;}
+    else do{const a=rnd()*Math.PI*2,r=rr(POND_R-1,58);x=Math.cos(a)*r;z=Math.sin(a)*r;tries++;}while(groundH(x,z)<-0.4&&tries<20);
     base[i*3]=x;base[i*3+1]=Math.max(groundH(x,z),-0.4)+rr(0.3,2.4);base[i*3+2]=z;ph[i]=rnd();
   }
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(base,3));g.setAttribute('aPhase',new THREE.BufferAttribute(ph,1));
@@ -1922,7 +1947,8 @@ function canopyGeo(blobs,topY,detail=2,flat=0.3){
       const x=p.getX(i),y=p.getY(i),z=p.getZ(i);const nn=vnoise(x*1.6+b[0]*3,y*1.6+z*1.6+b[2]*3)-0.5;
       let nx=x*(1+nn*0.42),ny=y*(1+nn*0.42),nz=z*(1+nn*0.42);if(ny<-b[3]*flat)ny=-b[3]*flat+(ny+b[3]*flat)*0.45;
       p.setXYZ(i,nx+b[0],ny+b[1],nz+b[2]);
-      leafShade(n.getY(i),c,vnoise(x*4,z*4));cols[i*3]=c.r;cols[i*3+1]=c.g;cols[i*3+2]=c.b;
+      leafShade(n.getY(i),c,vnoise(x*4,z*4));{const th=clamp((ny+b[1])/topY,0,1)+(vnoise(x*3+b[0],z*3+b[2])-0.5)*0.18;const band=th<0.42?0.7:th<0.72?0.9:1.08;const under=n.getY(i)<-0.25?0.66:1;c.multiplyScalar(band*under);}
+      cols[i*3]=c.r;cols[i*3+1]=c.g;cols[i*3+2]=c.b;
       sw[i]=0.25+0.75*clamp((ny+b[1])/topY,0,1);
     }
     ico.setAttribute('color',new THREE.BufferAttribute(cols,3));ico.setAttribute('aSway',new THREE.BufferAttribute(sw,1));parts.push(ico);
@@ -2641,7 +2667,7 @@ function renderJournal(){
   $('btnDebug').textContent=$('debug').hidden?'Test panel: off':'Test panel: on';
 }
 function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function showPane(id){jPane=id;for(const b of document.querySelectorAll('.jtab'))b.setAttribute('aria-selected',String(b.dataset.pane===id));for(const pid of ['pJournal','pCol','pValley'])$(pid).hidden=pid!==id;if(id==='pValley')renderValleyPane(true);}
+function showPane(id){jPane=id;for(const b of document.querySelectorAll('.jtab'))b.setAttribute('aria-selected',String(b.dataset.pane===id));for(const pid of ['pJournal','pCol','pScrap','pValley'])$(pid).hidden=pid!==id;if(id==='pValley')renderValleyPane(true);if(id==='pScrap')renderScrap();}
 document.querySelector('.jtabs').addEventListener('click',(e)=>{const b=e.target.closest('.jtab');if(b){showPane(b.dataset.pane);SFX.page();}});
 const HUD_KEY='rebuild-the-valley:hud';
 let hudMode=(()=>{try{const v=localStorage.getItem(HUD_KEY);if(['compact','expanded','hidden'].includes(v))return v;}catch(e){}return 'compact';})();
@@ -3243,6 +3269,59 @@ function showShot(cv){photo.canvas=cv;$('shotImg').src=cv.toDataURL('image/png')
   $('shotNote').textContent=DL?'':'Saving needs the artifact viewer; you can also right-click (or long-press) the picture and save it.';
   if(document.pointerLockElement)document.exitPointerLock();}
 $('shotClose').addEventListener('click',()=>{$('photoShot').hidden=true;canvas.focus({preventScroll:true});});
+/* ================================================================
+   v8: "Then and now" scrapbook: fixed-viewpoint snapshots per area at 0/25/50/100%, plus pinned photos.
+   Small JPEG thumbnails in their own localStorage key, capped.
+   ================================================================ */
+const SCRAP_KEY='rebuild-the-valley:scrapbook';
+const SCRAP_MS=[25,50,100],SCRAP_PIN_MAX=8,SCRAP_W=256,SCRAP_H=144;
+const SCRAP_AREAS=[
+  {id:'pond',name:'Mill Pond',on:()=>true,pct:()=>restorationPct(),view:()=>({p:[34,10.5,40],l:[0,1.2,0]})},
+  {id:'orchard',name:'The Old Orchard',on:()=>oStage()>=0,pct:()=>orchardPct(),view:()=>({p:[ORCH.x+20,groundH(ORCH.x+20,ORCH.z+15)+8,ORCH.z+15],l:[ORCH.x,5,ORCH.z]})},
+  {id:'home',name:'The mill cottage',on:()=>stage()>=3,pct:()=>Math.round(hStage()*100/3),view:()=>{const c=homeW(4.5,-12);return {p:[c.x,HOME_H+5.5,c.z],l:[HOME.x,HOME_H+1.6,HOME.z]};}},
+  {id:'reedbed',name:'The Reedbeds',on:()=>rbStage()>=0,pct:()=>Math.max(0,rbPct()),view:()=>{const a=RPATH[2];return {p:[a[0],groundH(a[0],a[1])+7,a[1]],l:[RB.x,8,RB.z]};}}];
+const scrap={data:{v:1,areas:{},pins:[]},q:[],t:0};
+(function(){try{const d=JSON.parse(localStorage.getItem(SCRAP_KEY)||'null');if(d&&d.v===1&&typeof d.areas==='object'&&Array.isArray(d.pins))scrap.data=d;}catch(e){}})();
+function scrapWrite(){if(sandbox)return;for(let k=0;k<6;k++){try{localStorage.setItem(SCRAP_KEY,JSON.stringify(scrap.data));return;}catch(e){if(scrap.data.pins.length)scrap.data.pins.shift();else return;}}}
+function scrapThumb(src,sx=0,sy=0,sw=src.width,sh=src.height){const tr=SCRAP_W/SCRAP_H;if(sw/sh>tr){const w=sh*tr;sx+=(sw-w)/2;sw=w;}else{const h=sw/tr;sy+=(sh-h)/2;sh=h;}
+  const cv=document.createElement('canvas');cv.width=SCRAP_W;cv.height=SCRAP_H;cv.getContext('2d').drawImage(src,sx,sy,sw,sh,0,0,SCRAP_W,SCRAP_H);return cv.toDataURL('image/jpeg',0.72);}
+function scrapStamp(){const d=new Date();return {d:dayKey(d),s:SEASON,h:Math.round(S.hours*10)/10};}
+function scrapStep(dt){
+  if(mode!=='play'||cine)return;scrap.t-=dt;if(scrap.t>0)return;scrap.t=2;
+  for(const A of SCRAP_AREAS){if(!A.on())continue;const list=scrap.data.areas[A.id]||(scrap.data.areas[A.id]=[]);const pct=A.pct();
+    if(scrap.q.some(r=>r.area===A.id))continue;
+    if(!list.length&&pct<25){scrap.q.push({area:A.id,p:0,at:simTime+4});continue;}
+    const due=SCRAP_MS.filter(m=>pct>=m&&!list.some(e=>e.p>=m));if(due.length)scrap.q.push({area:A.id,p:due[due.length-1],at:simTime+9});}
+}
+function scrapCapture(req){
+  const A=SCRAP_AREAS.find(a=>a.id===req.area);if(!A)return;const v=A.view();
+  const pp=camera.position.clone(),pq=camera.quaternion.clone();
+  camera.position.set(v.p[0],v.p[1],v.p[2]);camera.lookAt(v.l[0],v.l[1],v.l[2]);camera.updateMatrixWorld();
+  if(QP[Q.tier].post)composer.render(0);else renderer.render(scene,camera);
+  const src=renderer.domElement;const img=scrapThumb(src);
+  camera.position.copy(pp);camera.quaternion.copy(pq);camera.updateMatrixWorld();
+  if(QP[Q.tier].post)composer.render(0);else renderer.render(scene,camera);
+  const list=scrap.data.areas[A.id]||(scrap.data.areas[A.id]=[]);list.push({p:req.p,img,...scrapStamp()});list.sort((a,b)=>a.p-b.p);while(list.length>5)list.splice(1,1);
+  scrapWrite();if(req.p>0&&!sandbox)toast(`${A.name} at ${req.p}%: a new page in your scrapbook (J).`);
+}
+function scrapFrame(){if(!scrap.q.length||cine||mode!=='play'||photo.on||journalOpen)return;const r=scrap.q[0];if(simTime<r.at)return;scrap.q.shift();try{scrapCapture(r);}catch(e){console.error(e);}}
+function scrapPin(){const cv=photo.canvas;if(!cv)return;const near=SCRAP_AREAS.map(A=>({A,d:A.id==='pond'?Math.hypot(player.pos.x,player.pos.z)-30:A.id==='orchard'?orchDist(player.pos.x,player.pos.z):A.id==='home'?homeDist(player.pos.x,player.pos.z):rbDist(player.pos.x,player.pos.z)})).sort((a,b)=>a.d-b.d)[0].A;
+  scrap.data.pins.push({img:scrapThumb(cv),cap:near.name,...scrapStamp()});while(scrap.data.pins.length>SCRAP_PIN_MAX)scrap.data.pins.shift();scrapWrite();
+  $('shotNote').textContent=`Pinned to your scrapbook (${scrap.data.pins.length} of ${SCRAP_PIN_MAX}; the oldest goes when it's full).`;SFX.page();}
+const escA=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function scrapLabel(e){return `${e.p===0?'Before':e.p+'%'} · ${SEASONS[e.s]?SEASONS[e.s].label:e.s} · ${escA(e.d)}`;}
+function renderScrap(){
+  $('scrapAreas').innerHTML=SCRAP_AREAS.map(A=>{const list=scrap.data.areas[A.id]||[];const on=A.on();
+    const then=list.find(e=>e.p===0)||null,later=list.filter(e=>e.p>0),now=later.length?later[later.length-1]:null;
+    const fig=(e,empty)=>e?`<figure><img alt="${escA(A.name)}, ${e.p===0?'before':e.p+'% restored'}" src="${e.img}"><figcaption>${scrapLabel(e)}</figcaption></figure>`:`<div class="scrap-empty">${empty}</div>`;
+    const strip=list.length>2?`<div class="scrap-strip">${list.map(e=>`<figure><img alt="" src="${e.img}"><span>${e.p===0?'Before':e.p+'%'}</span></figure>`).join('')}</div>`:'';
+    return `<div class="scrap-card"><h3>${escA(A.name)}<small>${on?A.pct()+'% restored':'not found yet'}</small></h3><div class="scrap-pair">${fig(then,!on?'Keep restoring the valley to find this place':now?'Then: from before your scrapbook began':'The first picture is taken the next time you are here')}${fig(now,'Now: taken at 25%, 50% and 100%')}</div>${strip}</div>`;}).join('');
+  const pins=scrap.data.pins;$('scrapPinN').textContent=`${pins.length} of ${SCRAP_PIN_MAX}`;
+  $('scrapPins').innerHTML=pins.length?pins.map((e,i)=>`<figure><img alt="Pinned photo, ${escA(e.cap)}" src="${e.img}"><figcaption>${escA(e.cap)} · ${escA(e.d)}</figcaption><button type="button" data-unpin="${i}" aria-label="Remove this photo">×</button></figure>`).join(''):'<p class="qnote">Take a photo (P), then choose "Pin to scrapbook".</p>';
+}
+$('scrapPins').addEventListener('click',e=>{const b=e.target.closest('[data-unpin]');if(!b)return;scrap.data.pins.splice(+b.dataset.unpin,1);scrapWrite();renderScrap();});
+$('shotPin').addEventListener('click',()=>scrapPin());
+
 $('shotCard').addEventListener('click',()=>makePostcard());
 $('shotSave').addEventListener('click',()=>{
   const cv=photo.canvas;if(!cv)return;
@@ -3874,6 +3953,8 @@ function mendBoardwalk(b){
 }
 function reedbedVisuals(t,dt){
   fallsVisuals(dt);
+  if(dt>0&&waterU.uIceN.value>0.6&&nightF<0.6&&rnd()<dt*9){const a2=rnd()*6.28,r2=rr(4,POND_R-2);const x=Math.cos(a2)*r2,z=Math.sin(a2)*r2;
+    if(levelCur-groundH(x,z)>0.15){tmpCol.setRGB(2.2,2.3,2.5);fxGlow.emit(x,levelCur+0.15,z,0,rr(0.05,0.2),0,tmpCol,rr(0.1,0.18),rr(0.6,1.2),0,0.5,0);}}
   reedBoatStep(t,dt);
   rbGate.k=damp(rbGate.k,rbGate.open?1:0,1.5,dt);for(const L of rbGate.leaves)L.lf.rotation.y=L.sd*rbGate.k*1.5;
   const near=Math.hypot(player.pos.x-RPATH[1][0],player.pos.z-RPATH[1][1])<45||rbDist(player.pos.x,player.pos.z)<40;
@@ -4085,6 +4166,11 @@ GATHER.forEach(G3=>INTERACTS.push({x:G3.x,z:G3.z,r:2.0,state(){if(!gatherAvail(G
   done(){S.gather[G3.id]=S.gameDay;S.inv[G3.type]+=2;toast(G3.type==='wood'?'+2 wood':'+2 stone');SFX.rustle();SFX.get();layoutGather();dailyEvent('gather');writeSave();},pos:()=>_ip.set(G3.x,groundH(G3.x,G3.z)+0.8,G3.z)}));
 RCLUMPS.forEach(c=>INTERACTS.push({x:c.x,z:c.z,r:2.4,state(){if(rbStage()<0||!reedAvail(c.i))return null;return {ok:true,text:'Cut an armful of reeds',hold:1.0};},
   done(){S.reed.cut[c.i]=S.gameDay;S.inv.reed+=2;toast('+2 reeds');SFX.rustle();SFX.get();layoutRbReeds();writeSave();},pos:()=>_ip.set(c.x,groundH(c.x,c.z)+1.6,c.z)}));
+/* v8: a small "Slide" prompt around the frozen pond's edge */
+(()=>{const lv=LEVELS[3];for(let k=0;k<14;k++){const a=k/14*6.283;let r=6;for(;r<70;r+=0.5)if(groundH(Math.cos(a)*r,Math.sin(a)*r)>lv+0.05)break;if(r>=70)continue;
+  const x=Math.cos(a)*(r-1.2),z=Math.sin(a)*(r-1.2);
+  INTERACTS.push({x,z,r:4.2,state(){if(SEASON!=='winter'||waterU.uIceN.value<0.6||player.ice||onBridge(player.pos.x,player.pos.z))return null;return {ok:false,verb:'Slide',text:'The pond is frozen · walk out onto the ice (Shift to glide faster)'};},
+    done(){},pos:()=>_ip.set(x,levelCur+1.0,z)});}})();
 INTERACTS.push({x:WEAVE.x,z:WEAVE.z,r:2.8,state(){if(rbStage()<1)return null;const w=nextWeave();if(!w)return null;
     if(Object.entries(w.cost).some(([k,v])=>S.inv[k]<v))return {ok:false,text:`Weaving frame · ${w.name} needs ${reedCost(w.cost)} (you have ${S.inv.reed} reeds${w.cost.wood?`, ${S.inv.wood} wood`:''})`};
     return {ok:true,text:`Weave ${w.name}`,hold:2.0};},
@@ -4147,7 +4233,7 @@ function interactUI(){
   if(!interact.cur||!interact.st){promptEl.hidden=true;return;}
   const st=interact.st;
   const key=st.text+st.ok;
-  if(key!==promptKey){promptKey=key;promptText.textContent=st.text;promptVerb.textContent=st.ok?'Hold E':'Not yet';promptEl.classList.toggle('locked',!st.ok);}
+  if(key!==promptKey){promptKey=key;promptText.textContent=st.text;promptVerb.textContent=st.verb||(st.ok?'Hold E':'Not yet');promptEl.classList.toggle('locked',!st.ok);}
   promptEl.hidden=false;
   const sp=screenOf(interact.cur.pos());
   let x=sp.x,y=sp.y;
@@ -4447,8 +4533,8 @@ function updateDay(dt){
   for(const s of streams){s.u.uSky.value.copy(hor).lerp(zen,0.3);}
   const lampK=smooth(0.12,0.6,nightF+(1-skyHeal)*0.2+W.cloud*0.12);
   for(const m of lanternMats)m.emissiveIntensity=lampK*2.8;
-  poolMat.opacity=lampK*(0.28+0.5*G.uSnow.value)*(1-deepF*0.1);
-  for(const gs of glowSprites)gs.material.opacity=lampK*0.75;
+  poolMat.opacity=lampK*(0.3+0.16*nightF+0.45*G.uSnow.value);
+  for(const gs of glowSprites)gs.material.opacity=lampK*0.92;
   G.uSnow.value=damp(G.uSnow.value,SEASON==='winter'?lerp(0.84,1,W.snow):0,1.5,dt);
   G.uGrassH.value=damp(G.uGrassH.value,SEASON==='winter'?0.42:1,1.5,dt);
   G.uDry.value=damp(G.uDry.value,P.dry||0,1.5,dt);
@@ -4460,7 +4546,7 @@ function updateDay(dt){
   rain.u.uRain.value=rainK*(1-nightF*0.3);rain.u.uCam.value.copy(camera.position);
   drift.u.uAmt.value=W.type==='snow'?lerp(P.drift,0.95,W.snow):P.drift*(1+W.cloud*0.3);drift.u.uLight.value=W.type==='snow'?lerp(1,0.72,nightF):lerp(1,0.32,nightF)*(1-deepF*0.3);drift.u.uCam.value.copy(camera.position);
   const dusk=1-smooth(0.0,0.2,elev);
-  fireflies.uFire.value=damp(fireflies.uFire.value,(stage()>=3&&SEASON!=='winter'?1:0)*dusk*(1-rainK*0.7),0.8,dt);
+  fireflies.uFire.value=damp(fireflies.uFire.value,(stage()>=3?1:stage()>=1?0.55:0)*(SEASON!=='winter'?1:0)*dusk*(1-rainK*0.7),0.8,dt);
   if(stage()>=3&&fireflies.uFire.value>0.4&&!S.col.firefly){sighting('fireflies');toast('New in your journal: Firefly');}
   G.uWind.value=0.75+0.35*Math.sin(G.uTime.value*0.21)*Math.sin(G.uTime.value*0.13+1.0)+0.15+rainK*0.2+W.cloud*0.15;
 }
@@ -4638,7 +4724,7 @@ function worldStep(dt){
   for(const s of stumps){if(s.growing){s.grow=Math.min(1,s.grow+dt/2.4);s.tree.g.scale.setScalar(Math.max(0.001,easeOutBack(s.grow)));if(s.grow>=1)s.growing=false;}}
   if(barrier.anim>=0){barrier.anim+=dt;const k=ease(clamp(barrier.anim/2.5,0,1));barrier.g.position.copy(barrier.home).addScaledVector(barrier.perp,4.6*k);barrier.g.rotation.x=2.4*k;if(k>=1)barrier.anim=-1;}
   chanU.uFlow.value=damp(chanU.uFlow.value,chanSegs.every(c=>c.fixedOK)?1:0,0.6,dt);
-  fishSpotsStep(dt);sightStep(dt);dailyCheck(dt);
+  fishSpotsStep(dt);sightStep(dt);dailyCheck(dt);scrapStep(dt);
   let regrow=false;for(const s of SPOTS){if(s.growing){s.grow=Math.min(1,s.grow+dt/1.6);regrow=true;if(s.grow>=1)s.growing=false;}}
   if(regrow)layoutPlantedReeds();
   for(const b of creatures.butterflies){
@@ -4855,7 +4941,7 @@ function debugComplete(n){
   else if(n===8){if(stage()<3)setStageInstant(3);TP.home();const st=HOME_STEPS[hStage()+1];if(st){for(const [k,v] of Object.entries(st.cost))S.inv[k]=Math.max(S.inv[k],v);buildHomeStep();}}
   else{setStageInstant(8);TP.reedbed();S.inv.wood=Math.max(S.inv.wood,1);S.inv.reed=Math.max(S.inv.reed,2);for(const b of boardwalk.slice(0,4))setBoardwalk(b.i,true);mendBoardwalk(boardwalk[4]);}
 }
-if(DEBUG)window.__mz={get boatRun(){return boatRun;},WEAVE,weaveNext,launchBoat,reedBoat,spawnSight,SPECIES_BY_ID,setJournal:typeof setJournal==="function"?setJournal:null,scene,FALLS,TP,S,cam,player,teleport,setHomeStage,groundH,polyPoint,INLET,FALL,RB,get mode(){return mode;}};
+if(DEBUG)window.__mz={setStageInstant,setJ:(o,p)=>setJournal(o,p),scrap,renderScrap,showPane:typeof showPane==='function'?showPane:null,get boatRun(){return boatRun;},WEAVE,weaveNext,launchBoat,reedBoat,spawnSight,SPECIES_BY_ID,setJournal:typeof setJournal==="function"?setJournal:null,scene,FALLS,TP,S,cam,player,teleport,setHomeStage,groundH,polyPoint,INLET,FALL,RB,get mode(){return mode;}};
 function toggleDebug(force){
   const el=$('debug');const on=force!==undefined?force:el.hidden;el.hidden=!on;$('fps').hidden=!on;
   if(on)renderQualityUI();
@@ -4908,7 +4994,7 @@ function startGame(){
   cam.target.copy(player.pos);cam.target.y+=1.25;
   canvas.focus({preventScroll:true});
   setTimeout(()=>{$('hint').classList.add('gone');},30000);
-  if(!sandbox&&(S.news|0)<7){const back=S.visitDays>1||stage()>0;S.news=7;if(back)setTimeout(()=>toast('New in the valley (v7): weaving and a reed boat at the Reedbeds, a frozen pond to slide on, and more. See your journal (J).'),6500);}
+  if(!sandbox&&(S.news|0)<8){const back=S.visitDays>1||stage()>0;S.news=8;if(back)setTimeout(()=>toast('New in the valley (v8): a "Then and now" scrapbook, warmer nights and clearer winter ice. See your journal (J).'),6500);}
   if(welcomeMsg)setTimeout(()=>toast(welcomeMsg),1800);
   else if(S.visitDays<=1&&S.gifts.length&&!sandbox)setTimeout(()=>toast('The flood left a few things on the shore. Look for the glints.'),2200);
   writeSave();
@@ -4987,6 +5073,7 @@ function frame(now){
   if(mode==='play'){saveAcc+=frameDt;if(saveAcc>5){saveAcc=0;writeSave();}}
   if(QP[Q.tier].post)composer.render(vdt);else renderer.render(scene,camera);
   if(photo.shoot){photo.shoot=false;try{capturePhoto();}catch(e){console.error(e);}}
+  scrapFrame();
   perfMonitor(realDt);fpsUI(realDt);
   requestAnimationFrame(frame);
 }
