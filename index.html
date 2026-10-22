@@ -297,6 +297,7 @@ body.photo #hud{display:none}
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.01ms!important;transition-duration:.01ms!important}
 }
+#jNews{border:1.5px dashed rgba(92,72,52,.35);border-radius:10px;padding:8px 12px 4px;margin:0 0 14px;background:rgba(255,248,230,.35)}#jNews h2{margin-top:0}#jNews ul{margin:4px 0 6px;padding-left:18px;font-size:14px;line-height:1.4}#jNews li{margin:2px 0}
 </style>
 
 </head>
@@ -426,6 +427,16 @@ body.photo #hud{display:none}
           <p id="jTip" class="tip"></p>
         </div>
         <div class="page">
+          <div class="news" id="jNews">
+            <h2>What's new · v7</h2>
+            <ul>
+              <li>The Reedbeds: weave a basket, a mat and a little reed boat with Mira's frame, then send the boat down the stream to Mill Pond.</li>
+              <li>Six new Reedbed creatures to sketch: three dragonflies, two frogs and a night heron.</li>
+              <li>Winter freezes the pond over. Go for a slide (and fish through the ice).</li>
+              <li>The old cottage is real fieldstone now, ivy and all, and the rebuilt house glows warm after dark.</li>
+              <li>A lantern by the cider press, a gentler waterfall, a starlit pond and leafier orchard trees.</li>
+            </ul>
+          </div>
           <h2>Today's three small things</h2>
           <ul id="jToday" class="list2" style="grid-template-columns:1fr"></ul>
           <p class="qnote">No streaks and nothing to lose. A fresh three arrive with each real day.</p>
@@ -647,12 +658,12 @@ function rawHeight(x,z){
   if(r<POND_R+2){const k=r/(POND_R+2);h=-3.2+3.2*Math.pow(k,2.2);}
   else{h=2.6*smooth(POND_R+2,66,r)+(fbm(x*0.03+3.1,z*0.03-1.7,3)-0.5)*0.9*smooth(POND_R+5,42,r);}
   const hill=smooth(68,128,r);
-  h+=hill*hill*(16+22*fbm(x*0.011+9,z*0.011+4,4))*(1-0.74*(1-smooth(26,78,orchDist(x,z))));
+  h+=hill*hill*(16+22*fbm(x*0.011+9,z*0.011+4,4))*(1-0.74*(1-smooth(26,78,orchDist(x,z))))*(1-0.44*(1-smooth(30,82,rbDist(x,z))));
   h+=1.3*Math.exp(-((x+14)*(x+14)+(z-74)*(z-74))/200);
   const od=orchDist(x,z);
   if(od<34){const w=1-smooth(20,31,od);const ph=4.3+(fbm(x*0.05+21,z*0.05-8,2)-0.5)*0.6;h=lerp(h,ph,w);}
   const rd=rbDist(x,z);
-  if(rd<36){const ind=polyInfo(x,z,INLET).d;const inner=lerp(19,23,smooth(3,12,ind));const outer=inner+lerp(3.2,12,smooth(3,12,ind));const w=1-smooth(inner,outer,rd);const ph=8.6+(fbm(x*0.06+3,z*0.06+9,2)-0.5)*0.5;h=lerp(h,ph,w);}
+  if(rd<50){const ind=polyInfo(x,z,INLET).d;const inner=lerp(21,24,smooth(3,12,ind));const outer=inner+lerp(9,22,smooth(3,12,ind));const w=1-smooth(inner,outer,rd);const ph=8.6+(fbm(x*0.06+3,z*0.06+9,2)-0.5)*0.5;h=lerp(h,ph,w);}
   if(HOME_H!==null){const hd=homeDist(x,z);if(hd<14){const w=1-smooth(10.5,13.5,hd);h=lerp(h,HOME_H,w);}}
   const ci=polyInfo(x,z,CH);
   if(ci.d<2.6)h-=0.55*(1-smooth(0.8,2.3,ci.d))*smooth(0,3,ci.s);
@@ -801,7 +812,7 @@ function growGLSL(o){return `
 
 const matCache=new Map();
 function makeToon(color,o={}){
-  const key=JSON.stringify([color,!!o.vc,!!o.wind,o.windAmp,!!o.grow,o.growBase,o.growA,o.growB,!!o.noHeal,o.rim,o.side,o.emissive,o.mapKey,o.tag,o.alphaTest,o.tint,o.back,o.snow,!!o.grassH,!!o.leaf]);
+  const key=JSON.stringify([color,!!o.vc,!!o.wind,o.windAmp,!!o.grow,o.growBase,o.growA,o.growB,!!o.noHeal,o.rim,o.side,o.emissive,o.mapKey,o.tag,o.alphaTest,o.tint,o.back,o.snow,!!o.grassH,!!o.leaf,!!o.fade]);
   if(matCache.has(key))return matCache.get(key);
   const m=new THREE.MeshToonMaterial({color,gradientMap,vertexColors:!!o.vc,side:o.side??THREE.FrontSide,map:o.map??null,alphaMap:o.alphaMap??null,alphaTest:o.alphaTest??0});
   if(o.emissive!==undefined){m.emissive=new THREE.Color(o.emissive);m.emissiveIntensity=0;}
@@ -1174,8 +1185,11 @@ const water=new THREE.Mesh(new THREE.PlaneGeometry(WORLD,WORLD,1,1).rotateX(-Mat
       }
       body=mix(uMurk*(1.0-0.3*smoothstep(0.0,2.0,depth)),body,smoothstep(0.0,1.0,hl));
       body*=uLit;
+      { float bl=dot(body,vec3(0.3,0.59,0.11)); body=mix(body,vec3(bl*0.5,bl*0.6,bl*0.85),uNight*0.85)*mix(1.0,0.45,uNight); }
+      fres=mix(fres,max(fres,0.62),uNight);
       vec3 col=mix(body,skyc,fres);
-      { float mdw=max(dot(r,uMoonDir),0.0); col+=vec3(0.85,0.9,1.0)*(pow(mdw,500.0)*3.5+pow(mdw,60.0)*0.12)*uNight; }
+      { float mdw=max(dot(r,uMoonDir),0.0); float gl=step(0.93,n21(p*vec2(5.0,9.0)+vec2(t*0.6,-t*0.4)));
+        col+=vec3(0.85,0.9,1.0)*(pow(mdw,500.0)*3.5+pow(mdw,40.0)*0.3+gl*pow(mdw,6.0)*0.9)*uNight; }
       col+=uSunCol*spec*(1.0-uNight*0.85);
       float fn=n21(p*2.5+t*0.25);
       float foam=1.0-smoothstep(0.0,0.2+0.14*fn,depth);
@@ -1225,13 +1239,13 @@ function makeStream(poly,s0,s1,halfW,dir,clip){
         float fall=smoothstep(0.25,0.8,vSteep);
         float fl=vUv.y*0.6+uTime*(1.6+fall*4.0)*uDir;
         float streak=n21(vec2(vUv.x*5.0,fl))*0.6+n21(vec2(vUv.x*13.0,fl*2.3))*0.4;
-        float foam=fall*(0.6+0.4*streak)+smoothstep(0.6,0.86,streak)+smoothstep(0.7,1.0,across)*0.55+smoothstep(2.5,0.0,vUv.y-uS0)*(1.0-uClip)*0.9;
+        float foam=fall*(0.12+0.3*streak)+smoothstep(0.6,0.86,streak)*(1.0-fall)+smoothstep(0.7,1.0,across)*0.55+smoothstep(2.5,0.0,vUv.y-uS0)*(1.0-uClip)*0.9;
         vec3 col=mix(uCol,uSky,0.3+0.3*streak);
         col=mix(col,uFoam,clamp(foam,0.0,1.0)*0.7);
         float hl=healAt(vW); float l=dot(col,vec3(0.3,0.59,0.11));
         col=mix(vec3(l*0.85,l*0.9,l*0.95),col,hl*0.8+0.2);
         col*=mix(0.16,1.0,uLit);
-        float a=(0.88-across*across*0.55)*uFlow;
+        float a=(0.88-across*across*0.55)*uFlow*mix(1.0,0.5,fall);
         gl_FragColor=vec4(col,a);
         #include <fog_fragment>
         ${OUT_GLSL}
@@ -1555,6 +1569,8 @@ const POOL_TEX=(()=>{const S2=128;const cv=document.createElement('canvas');cv.w
   gr.addColorStop(0,'rgba(255,255,255,1)');gr.addColorStop(0.45,'rgba(255,255,255,.45)');gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(0,0,S2,S2);const t=new THREE.CanvasTexture(cv);return t;})();
 const poolMat=new THREE.MeshBasicMaterial({map:POOL_TEX,color:new THREE.Color(1.0,0.62,0.28),transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,fog:false,polygonOffset:true,polygonOffsetFactor:-2});
 const lightPools=[];
+const glowSprites=[];
+function addGlow(parent,x,y,z,size,col=0xffb35c){const m=new THREE.Sprite(new THREE.SpriteMaterial({map:POOL_TEX,color:col,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,fog:false}));m.position.set(x,y,z);m.scale.setScalar(size);m.renderOrder=6;parent.add(m);glowSprites.push(m);return m;}
 function makeLightPool(x,z,r,parent){const m=new THREE.Mesh(new THREE.CircleGeometry(r,24).rotateX(-Math.PI/2),poolMat);m.position.set(x,groundH(x,z)+0.06,z);m.renderOrder=3;(parent||scene).add(m);lightPools.push(m);return m;}
 function addLamp(g,lx,ly,lz){g.updateMatrixWorld(true);const v=g.localToWorld(new THREE.Vector3(lx,ly,lz));const L=new THREE.PointLight(0xffb35c,0,16,2);L.position.copy(v);scene.add(L);lampLights.push(L);makeLightPool(v.x,v.z,3.4);return L;}
 addLamp(cottage,0.0,1.9,2.7);addLamp(mill.g,0.4,3.0,-3.4);
@@ -1760,7 +1776,25 @@ function setChanFixed(c,on){c.fixedOK=on;c.anim=-1;c.broken.forEach(m=>{m.visibl
 
 /* fruit trees: one shared canopy material whose colour follows the season */
 const orchLeafMat=makeToon(0xffffff,{vc:true,wind:true,windAmp:0.35,rim:0.25,tag:'orchLeaf',leaf:true});
-const appleMat=makeToon(0xc8352a,{rim:0.4,noHeal:true,tag:'apple'});
+const appleMat=makeToon(0xc8352a,{rim:0.4,noHeal:true,tag:'apple',fade:true});
+/* v7: canopies as clusters of faceted leaf clumps, painted light at the crown and dark underneath */
+function clusterCanopyGeo(blobs,topY,rs=rnd,dens=1){
+  const parts=[];const c=new THREE.Color();let lo=1e9;for(const b of blobs)lo=Math.min(lo,b[1]-b[3]*0.8);const span=Math.max(0.5,topY-lo);
+  const push=(g,cx,cy,cz,jit)=>{g=g.index?g.toNonIndexed():g;const p=g.attributes.position;const cols=new Float32Array(p.count*3),sw=new Float32Array(p.count);
+    for(let i=0;i<p.count;i++){const x=p.getX(i)+cx,y=p.getY(i)+cy,z=p.getZ(i)+cz;p.setXYZ(i,x,y,z);}
+    g.computeVertexNormals();const n=g.attributes.normal;
+    for(let i=0;i<p.count;i++){const y=p.getY(i);const t=clamp((y-lo)/span,0,1);leafShade(n.getY(i),c,jit);const gk=lerp(0.52,1.2,t*t*(3-2*t));
+      cols[i*3]=c.r*gk*lerp(0.92,1.04,t);cols[i*3+1]=c.g*gk;cols[i*3+2]=c.b*gk*lerp(1.08,0.9,t);sw[i]=0.25+0.75*t;}
+    g.setAttribute('color',new THREE.BufferAttribute(cols,3));g.setAttribute('aSway',new THREE.BufferAttribute(sw,1));if(g.attributes.uv)g.deleteAttribute('uv');parts.push(g);};
+  for(const b of blobs){
+    const core=new THREE.IcosahedronGeometry(b[3]*0.68,1);core.scale(1,0.8,1);push(core,b[0],b[1]-b[3]*0.05,b[2],0.15);
+    const N=Math.round((7+9*b[3]*b[3])*dens);
+    for(let k=0;k<N;k++){const u=rs()*2-1,ph=rs()*6.28;const up=clamp(u*0.9+0.15,-0.55,0.97);const rxy=Math.sqrt(1-up*up);const d=b[3]*(0.5+rs()*0.38);
+      const cr=b[3]*(0.28+rs()*0.16);const g=new THREE.IcosahedronGeometry(cr,0);g.scale(1+rs()*0.3,0.62+rs()*0.2,1+rs()*0.3);g.rotateY(rs()*6.28);g.rotateX((rs()-0.5)*0.6);
+      const p=g.attributes.position;for(let i=0;i<p.count;i++)p.setXYZ(i,p.getX(i)*(0.85+rs()*0.3),p.getY(i),p.getZ(i)*(0.85+rs()*0.3));
+      push(g,b[0]+Math.cos(ph)*rxy*d,b[1]+up*d*0.85,b[2]+Math.sin(ph)*rxy*d,rs());}}
+  return mergeGeometries(parts);
+}
 function fruitTree(x,z,big){
   const g=new THREE.Group();g.position.set(x,groundH(x,z)-0.1,z);g.rotation.y=rnd()*6.28;scene.add(g);
   const k=big?1.7:1;const trunkH=big?2.2:1.5;
@@ -1770,12 +1804,13 @@ function fruitTree(x,z,big){
   const crown=new THREE.Group();crown.position.y=trunkH;g.add(crown);
   const blobs=[];for(let i=0;i<(big?7:4);i++){const a=i/(big?7:4)*6.28+rnd()*0.5,r=i===0?0:rr(0.7,1.2)*k;blobs.push([Math.cos(a)*r,rr(0.3,1.0)*k,Math.sin(a)*r,rr(0.75,1.0)*k]);}
   const parts=[];const c=new THREE.Color();
-  for(const b of blobs){const ico=new THREE.IcosahedronGeometry(b[3],1);const p=ico.attributes.position,n=ico.attributes.normal;const cols=new Float32Array(p.count*3),sw=new Float32Array(p.count);
+  if(true){parts.push(clusterCanopyGeo(blobs,Math.max(...blobs.map(b=>b[1]+b[3]))));}
+  else for(const b of blobs){const ico=new THREE.IcosahedronGeometry(b[3],1);const p=ico.attributes.position,n=ico.attributes.normal;const cols=new Float32Array(p.count*3),sw=new Float32Array(p.count);
     for(let i=0;i<p.count;i++){const x0=p.getX(i),y0=p.getY(i),z0=p.getZ(i);const nn=vnoise(x0*2+b[0]*3,y0*2+z0*2)-0.5;p.setXYZ(i,x0*(1+nn*0.4)+b[0],y0*(1+nn*0.4)*0.85+b[1],z0*(1+nn*0.4)+b[2]);leafShade(n.getY(i),c,vnoise(x0*4,z0*4));cols[i*3]=c.r;cols[i*3+1]=c.g;cols[i*3+2]=c.b;sw[i]=0.5;}
     ico.setAttribute('color',new THREE.BufferAttribute(cols,3));ico.setAttribute('aSway',new THREE.BufferAttribute(sw,1));parts.push(ico);}
   const canopy=new THREE.Mesh(mergeGeometries(parts),orchLeafMat);canopy.castShadow=true;crown.add(canopy);
   const apples=new THREE.Group();crown.add(apples);
-  for(let i=0;i<(big?14:7);i++){const b=blobs[i%blobs.length];const d=new THREE.Vector3(rr(-1,1),rr(-0.6,0.3),rr(-1,1)).normalize().multiplyScalar(b[3]*0.95);
+  for(let i=0;i<(big?14:7);i++){const b=blobs[i%blobs.length];const d=new THREE.Vector3(rr(-1,1),rr(-0.6,0.3),rr(-1,1)).normalize().multiplyScalar(b[3]*1.1);
     const a=new THREE.Mesh(new THREE.SphereGeometry(0.1*(big?1.1:1),8,6),appleMat);a.position.set(b[0]+d.x,b[1]+d.y*0.85,b[2]+d.z);apples.add(a);}
   return {g,crown,canopy,apples,blobs};
 }
@@ -1831,11 +1866,22 @@ const press=(()=>{
   broken.push(boxM(0.28,1.3,0.28,dark,g,1.1,0.95,0,0.015));
   built.forEach(m=>{m.userData.target=m.scale.clone();m.visible=false;});
   for(let i=0;i<3;i++){const j=new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.26,0.5,10),makeToon(0xb89a6a,{}));j.position.set(-1.9+i*0.55,0.25,1.6);j.castShadow=true;g.add(j);}
+  /* v7: a hanging lantern on a crook post, so the press has a warm pool of light at dusk */
+  { const L=new THREE.Group();L.position.set(2.1,0,-1.1);g.add(L);
+    cylM(0.07,0.09,2.9,dark,L,0,1.45,0,6,0.01);boxM(0.9,0.08,0.08,dark,L,0.4,2.82,0,0.006);boxM(0.06,0.4,0.06,dark,L,0.82,2.95,0,0,0,0,-0.6);
+    cylM(0.012,0.012,0.36,0x2a2420,L,0.8,2.62,0,4);
+    const lm=makeToon(0xffe6b0,{emissive:0xffb35c,noHeal:true,tag:'lantern7'});lanternMats.push(lm);
+    boxM(0.26,0.06,0.26,0x2a2420,L,0.8,2.44,0,0);boxM(0.3,0.06,0.3,0x2a2420,L,0.8,2.08,0,0);
+    const core=new THREE.Mesh(new THREE.BoxGeometry(0.2,0.3,0.2),lm);core.position.set(0.8,2.26,0);L.add(core);
+    for(const [x,z] of [[-0.11,-0.11],[0.11,-0.11],[-0.11,0.11],[0.11,0.11]])boxM(0.03,0.34,0.03,0x2a2420,L,0.8+x,2.26,z,0);
+    const ConeR=new THREE.Mesh(new THREE.ConeGeometry(0.2,0.14,4),makeToon(0x2a2420,{}));ConeR.position.set(0.8,2.54,0);ConeR.rotation.y=Math.PI/4;L.add(ConeR);
+  }
   const world=(lx,lz)=>{const v=new THREE.Vector3(lx,0,lz).applyEuler(g.rotation);return {x:PRESS.x+v.x,z:PRESS.z+v.z};};
   const front=world(0,2.5);
   addCollider(PRESS.x,PRESS.z,1.5);BUILDINGS.push({x:PRESS.x,z:PRESS.z,r:3});
   return {g,built,broken,screw,fixedOK:false,anim:-1,ix:front.x,iz:front.z,x:PRESS.x,z:PRESS.z,world};
 })();
+{ const Lp=addLamp(press.g,2.9,2.2,-1.1);Lp.distance=18;const v=press.world(2.6,-0.9);makeLightPool(v.x,v.z,5.2);makeLightPool(v.x,v.z,2.8);addGlow(press.g,2.9,2.26,-1.1,2.2);const c=press.world(2.1,-1.1);addCollider(c.x,c.z,0.25); }
 function setPressFixed(on){press.fixedOK=on;press.anim=-1;press.broken.forEach(m=>{m.visible=!on;m.scale.setScalar(1);});press.built.forEach(m=>{m.visible=on;m.scale.copy(m.userData.target);});}
 let heroCards=null;
 const LEAF_TEX=leafTexture();
@@ -2030,7 +2076,7 @@ const dapples=[];
   for(let i=0;i<11;i++){const a=i/11*6.28+rs()*0.5,r=1.7+rs()*1.7;blobs.push([Math.cos(a)*r,0.6+rs()*1.4,Math.sin(a)*r,1.1+rs()*0.55]);}
   blobs.push([0,1.9,0,1.6],[0.6,2.9,-0.3,1.2]);
   const topY=Math.max(...blobs.map(b=>b[1]+b[3]));
-  const core=new THREE.Mesh(canopyGeo(blobs,topY,1,0.35),orchLeafMat);core.castShadow=true;core.receiveShadow=true;
+  const core=new THREE.Mesh(clusterCanopyGeo(blobs,topY,rs,1.3),orchLeafMat);core.castShadow=true;core.receiveShadow=true;
   const cards=new THREE.Mesh(cardGeo(blobs,topY,1.4,rs),orchCardMat);cards.castShadow=true;cards.receiveShadow=true;orchCardMeshes.push(cards);
   const canopy=new THREE.Group();canopy.add(core,cards);t.crown.add(canopy);t.canopy=canopy;
   const trunk=new THREE.Mesh(trunkGeo(trunkH,blobs.map(b=>[b[0]*0.8,b[1]+trunkH,b[2]*0.8,b[3]]),rs,1.55,5),treeMat);trunk.castShadow=true;trunk.receiveShadow=true;t.g.add(trunk);
@@ -2305,7 +2351,7 @@ function setMuted(m){AU.muted=m;if(AU.master&&AU.ctx)AU.master.gain.setTargetAtT
 const SAVE_KEY='rebuild-the-valley:mill-pond:v1';
 const S={hours:8.5,inv:{wood:0,stone:0,reed:0,cut:0},sight:{butterflies:false,ducks:false,birds:false,fireflies:false,fish:false},errands:{},muted:false,
   lastDay:null,visitDays:0,daily:null,gifts:[],keepsakes:[],col:{},notes:[],cosmetics:{},wearing:'straw',gameDay:0,cutTaken:0,decor:[],stored:{},
-  home:0,plots:null,crops:{},ciders:{},earned:{},gather:{},reed:{bw:[false,false,false,false,false],cut:[]},harvests:0,photos:0,applePick:{}};
+  home:0,plots:null,crops:{},ciders:{},earned:{},gather:{},reed:{bw:[false,false,false,false,false],cut:[],woven:{},floated:false},news:0,harvests:0,photos:0,applePick:{}};
 function stage(){if(!piles.every(p=>p.cleared))return 0;if(!sluice.built)return 1;if(!SPOTS.every(s=>s.planted))return 2;return 3;}
 function oStage(){if(stage()<3)return -1;if(!brambles.every(b=>b.cleared))return 0;if(!chanSegs.every(c=>c.fixedOK))return 1;if(!stumps.every(s=>s.planted))return 2;if(!press.fixedOK)return 3;return 4;}
 function restorationPct(){const p=piles.filter(x=>x.cleared).length*5;const s=sluice.built?35:0;const r=SPOTS.filter(x=>x.planted).length*4.375;return Math.round(p+s+r);}
@@ -2336,7 +2382,7 @@ function serialize(){
     brambles:brambles.map(b=>b.cleared),heaps:stoneHeaps.map(h=>h.left),chan:chanSegs.map(c=>c.fixedOK),stumps:stumps.map(s=>s.planted),
     lastDay:S.lastDay,visitDays:S.visitDays,daily:S.daily,gifts:S.gifts,keepsakes:S.keepsakes,col:S.col,notes:S.notes,cosmetics:S.cosmetics,wearing:S.wearing,gameDay:S.gameDay,cutTaken:S.cutTaken,
     press:press.fixedOK,oda:{met:oda.met,lastDay:oda.lastDay},decor:S.decor,stored:S.stored,
-    home:S.home,plots:S.plots,crops:S.crops,ciders:S.ciders,earned:S.earned,gather:S.gather,reed:S.reed,harvests:S.harvests,photos:S.photos,applePick:S.applePick,mira:{met:mira.met,lastDay:mira.lastDay}};
+    home:S.home,plots:S.plots,crops:S.crops,ciders:S.ciders,earned:S.earned,gather:S.gather,reed:S.reed,harvests:S.harvests,photos:S.photos,applePick:S.applePick,mira:{met:mira.met,lastDay:mira.lastDay},news:S.news};
 }
 function writeSave(){if(sandbox)return;try{localStorage.setItem(SAVE_KEY,JSON.stringify(serialize()));}catch(e){}}
 function validSave(d){return !!(d&&typeof d==='object'&&(d.v===1||d.v===2||d.v===3||d.v===4));}
@@ -2386,7 +2432,9 @@ function applySave(d){
   if(d.earned&&typeof d.earned==='object')for(const k in d.earned)if(DECOR_BY_ID[k]&&d.earned[k])S.earned[k]=true;
   if(d.gather&&typeof d.gather==='object')for(const k in d.gather){const v=num(d.gather[k],-1,1e7);if(v!==null)S.gather[k]=v|0;}
   if(d.applePick&&typeof d.applePick==='object')for(const k in d.applePick){const v=num(d.applePick[k],-1,1e7);if(v!==null)S.applePick[k]=v|0;}
-  if(d.reed&&typeof d.reed==='object'){if(Array.isArray(d.reed.bw)&&d.reed.bw.length===5)S.reed.bw=d.reed.bw.map(Boolean);if(Array.isArray(d.reed.cut))S.reed.cut=d.reed.cut.slice(0,6).map(v=>Number.isFinite(v)?v|0:-1);}
+  if(d.reed&&typeof d.reed==='object'){if(Array.isArray(d.reed.bw)&&d.reed.bw.length===5)S.reed.bw=d.reed.bw.map(Boolean);if(Array.isArray(d.reed.cut))S.reed.cut=d.reed.cut.slice(0,6).map(v=>Number.isFinite(v)?v|0:-1);
+    S.reed.woven={};if(d.reed.woven&&typeof d.reed.woven==='object')for(const k of ['basket','mat','boat'])if(d.reed.woven[k])S.reed.woven[k]=true;S.reed.floated=!!d.reed.floated;}
+  S.news=Number.isFinite(d.news)?d.news|0:0;
   if(d.mira&&typeof d.mira==='object'){const m=num(d.mira.met,0,3),l=num(d.mira.lastDay,-1,1e7);if(m!==null)mira.met=m|0;if(l!==null)mira.lastDay=Math.floor(l);}
   if(d.stored&&typeof d.stored==='object')for(const k in d.stored){if(DECOR_BY_ID[k]){const v=num(d.stored[k],0,99);if(v!==null)S.stored[k]=v|0;}}
 }
@@ -2473,6 +2521,12 @@ function primaryTargets(){
         else{if(S.inv.reed>=2&&S.inv.wood>=1)boardwalk.forEach(b=>{if(!S.reed.bw[b.i])out.push({x:b.x,z:b.z,label:"Mend the reed-weaver's boardwalk",r:1.5});});
           if(S.inv.reed<2)RCLUMPS.forEach(c=>{if(reedAvail(c.i))out.push({x:c.x,z:c.z,label:'Cut reeds by the stream',r:1.3});});
           if(S.inv.wood<1)GATHER.forEach(G3=>{if(G3.type==='wood'&&gatherAvail(G3))out.push({x:G3.x,z:G3.z,label:'Gather fallen branches for wood',r:1.2});});}}
+      else if(rs>=1&&boatRun)out.push({x:boatRun.x,z:boatRun.z,label:'Follow the reed boat down to Mill Pond',r:1.4});
+      else if(rs>=1&&!S.reed.floated&&rbDist(player.pos.x,player.pos.z)<34){const w=nextWeave();
+        if(!w)out.push({x:WEAVE.lx,z:WEAVE.lz,label:'Set the reed boat on the stream',r:1.4});
+        else if(S.inv.reed>=w.cost.reed&&S.inv.wood>=(w.cost.wood||0))out.push({x:WEAVE.x,z:WEAVE.z,label:`Weave ${w.name} at the frame`,r:1.5});
+        else if(S.inv.reed<w.cost.reed)RCLUMPS.forEach(c=>{if(reedAvail(c.i))out.push({x:c.x,z:c.z,label:'Cut reeds for weaving',r:1.3});});
+        else GATHER.forEach(G3=>{if(G3.type==='wood'&&gatherAvail(G3))out.push({x:G3.x,z:G3.z,label:'Gather a branch for the boat',r:1.2});});}
       else if(hStage()<3&&!homeBusy)out.push({x:home.ix,z:home.iz,label:HOME_STEPS[hStage()+1].t+' by the mill yard',r:2.0});
     }else if(os===3){
       if(press.anim<0)out.push({x:press.ix,z:press.iz,label:S.inv.wood>=PRESS_WOOD?'Mend the old cider press':`Bring ${PRESS_WOOD} wood to the cider press (you have ${S.inv.wood})`,r:1.8});
@@ -2482,7 +2536,7 @@ function primaryTargets(){
 }
 const ERRANDS=[
   {id:'sign',t:'Read the signpost by the path',x:SIGN.x,z:SIGN.z,avail:()=>true,check:()=>Math.hypot(player.pos.x-SIGN.x,player.pos.z-SIGN.z)<3.2},
-  {id:'wade',t:'Wade into the shallows',x:12,z:36,avail:()=>true,check:()=>depthAt(player.pos.x,player.pos.z)>0.25},
+  {id:'wade',t:'Wade into the shallows',x:12,z:36,avail:()=>true,check:()=>depthAt(player.pos.x,player.pos.z)>0.25&&!player.ice},
   {id:'camphor',t:'Rest under the great camphor',x:HERO.x,z:HERO.z,avail:()=>true,check:()=>Math.hypot(player.pos.x-HERO.x,player.pos.z-HERO.z)<6.5},
   {id:'mill',t:'Visit the old mill',x:mill.x,z:mill.z,avail:()=>true,check:()=>Math.hypot(player.pos.x-mill.x,player.pos.z-mill.z)<9},
   {id:'bridge',t:'Cross a footbridge',x:BRIDGES[1].x,z:BRIDGES[1].z,avail:()=>true,check:()=>onBridge(player.pos.x,player.pos.z)},
@@ -2490,6 +2544,7 @@ const ERRANDS=[
   {id:'ducks',t:'Sit with the ducks a moment',avail:()=>creatures.ducks.length>0,check:()=>creatures.ducks.some(d=>d.state==='swim'&&player.pos.distanceTo(d.pos)<10)},
   {id:'dusk',t:'Watch the sun set over the water',avail:()=>stage()>=1,check:()=>goldF>0.5&&Math.hypot(player.pos.x,player.pos.z)<45},
   {id:'fireflies',t:'Find the fireflies after dark',avail:()=>stage()>=3,check:()=>fireflies.uFire.value>0.5&&Math.hypot(player.pos.x,player.pos.z)<50},
+  {id:'skate',t:'Slide across the frozen pond',x:6,z:-4,avail:()=>SEASON==='winter'&&stage()>=1,check:()=>player.ice&&Math.hypot(player.vel.x,player.vel.z)>3.5},
   {id:'orchard',t:'Eat an apple in the orchard',avail:()=>oStage()>=3&&SEASON!=='winter',check:()=>orchDist(player.pos.x,player.pos.z)<14}
 ];
 const errandHold={};
@@ -2694,6 +2749,12 @@ const SPECIES=[
   {id:'warbler',type:'bird',name:'Reed warbler',hab:'reedbed',rar:0,shape:'small',col:'#a08a5a',hint:'The Reedbeds · daytime, spring to autumn',note:'Sings the same tune over and over, like someone humming while they work.',ok:()=>!inS('winter')&&nightF<0.35},
   {id:'reedling',type:'bird',name:'Bearded reedling',hab:'reedbed',rar:1,shape:'small',col:'#c8955a',hint:'The Reedbeds · daytime, any season',note:'They ping to each other like little bells as they move through the stems.',ok:()=>nightF<0.35},
   {id:'damselfly',type:'insect',name:'Banded damselfly',hab:'reedbed',rar:1,shape:'dragonfly',col:'#3a6ad8',hint:'The Reedbeds · sunny days, summer and autumn',note:'Folds its wings when it lands, as if it were tidying up.',ok:()=>inS('summer','autumn')&&nightF<0.3&&!wx('rain','snow')},
+  {id:'emperor',type:'insect',name:'Emperor dragonfly',hab:'reedbed',rar:1,shape:'dragonfly',col:'#3a7ad0',hint:'The Reedbeds · sunny days, summer',note:'Patrols the same stretch of stream all afternoon, like a very small lifeguard.',ok:()=>inS('summer')&&nightF<0.3&&!wx('rain','snow')},
+  {id:'goldring',type:'insect',name:'Golden-ringed dragonfly',hab:'reedbed',rar:2,shape:'dragonfly',col:'#d8b03a',hint:'The Reedbeds · bright mornings, spring and summer',note:'Black and gold, and it knows it.',ok:()=>inS('spring','summer')&&S.hours<13&&nightF<0.3&&!wx('rain','snow')},
+  {id:'darter',type:'insect',name:'Common darter',hab:'reedbed',rar:0,shape:'dragonfly',col:'#c8582a',hint:'The Reedbeds · daytime, late summer and autumn',note:'Sits on the same reed tip, leaves, comes back. Every single time.',ok:()=>inS('summer','autumn')&&nightF<0.35},
+  {id:'marshfrog',type:'critter',name:'Marsh frog',hab:'reedbed',rar:0,shape:'frog',col:'#6a9a3a',hint:'The Reedbeds · spring to autumn, loudest at dusk',note:'Laughs at everything. Mostly at you.',ok:()=>!inS('winter')},
+  {id:'treefrog',type:'critter',name:'Tree frog',hab:'reedbed',rar:2,shape:'frog',col:'#8ac84a',hint:'The Reedbeds · rainy days or after dark',note:'Small enough to sit on a thumb. It would rather not.',ok:()=>!inS('winter')&&(wx('rain')||nightF>0.5)},
+  {id:'nightheron',type:'bird',name:'Night heron',hab:'reedbed',rar:2,shape:'heron',col:'#5a6a7a',hint:'The Reedbeds · dusk and night, any season',note:'Hunched like it is waiting for a bus. It is not waiting for a bus.',ok:()=>nightF>0.35},
   {id:'greens',type:'crop',name:'Spring greens',hab:'none',rar:0,shape:'leafy',col:'#8fd05a',hint:'Sow and grow in spring',note:'Crisp and a little bitter. Best eaten standing in the garden.',ok:()=>false},
   {id:'berries',type:'crop',name:'Summer berries',hab:'none',rar:0,shape:'berries',col:'#c8283a',hint:'Sow and grow in summer',note:'Half of them never make it back to the cottage.',ok:()=>false},
   {id:'pumpkin',type:'crop',name:'Pumpkin',hab:'none',rar:0,shape:'pumpkin',col:'#e07a24',hint:'Sow and grow in autumn',note:'Heavier than it looks, and it looks heavy.',ok:()=>false},
@@ -2706,7 +2767,7 @@ const SPECIES=[
   {id:'cordial',type:'drink',name:'Spring greens cordial',hab:'none',rar:1,shape:'bottle',col:'#8ac85a',hint:'Press 3 spring greens',note:'Green as new leaves. Better than it sounds.',ok:()=>false}
 ];
 const SPECIES_BY_ID=Object.fromEntries(SPECIES.map(s=>[s.id,s]));
-const TYPE_LABEL={fish:'Fish',insect:'Insects',bird:'Birds',flower:'Flowers',crop:'Crops',drink:'Drinks',furniture:'Furniture'};
+const TYPE_LABEL={fish:'Fish',insect:'Insects',critter:'Critters',bird:'Birds',flower:'Flowers',crop:'Crops',drink:'Drinks',furniture:'Furniture'};
 const SHAPES={
   round:'<ellipse cx="54" cy="30" rx="34" ry="16"/><path d="M86 30 L110 14 L105 30 L110 46 Z"/><path d="M44 15 C52 6 62 8 66 15" fill="none"/>',
   slim:'<ellipse cx="52" cy="31" rx="40" ry="9"/><path d="M90 31 L110 20 L106 31 L110 42 Z"/>',
@@ -2738,6 +2799,7 @@ const SHAPES={
   firefly:'<circle cx="60" cy="38" r="14" fill="rgba(246,215,122,.5)" stroke="none"/><ellipse cx="60" cy="28" rx="7" ry="14"/><path d="M54 18 L44 8 M66 18 L76 8" fill="none"/>',
   cricket:'<ellipse cx="62" cy="34" rx="22" ry="8"/><circle cx="36" cy="32" r="6"/><path d="M32 28 C20 10 10 8 4 8 M34 28 C30 12 24 6 18 4 M70 36 L84 54 M78 32 L100 50" fill="none"/>',
   duck:'<ellipse cx="58" cy="38" rx="30" ry="14"/><circle cx="84" cy="20" r="10"/><path d="M92 20 L108 24 L92 26 Z"/><path d="M28 34 L14 28 L20 40Z"/>',
+  frog:'<ellipse cx="60" cy="38" rx="26" ry="14"/><circle cx="46" cy="22" r="7"/><circle cx="74" cy="22" r="7"/><path d="M36 46 C24 50 22 56 30 56 M84 46 C96 50 98 56 90 56" fill="none" stroke-width="3"/><path d="M50 42 Q60 48 70 42" fill="none"/>',
   heron:'<ellipse cx="50" cy="26" rx="18" ry="9"/><path d="M64 22 C74 14 66 8 72 4 L76 6" fill="none" stroke-width="3"/><path d="M76 5 L98 8" fill="none" stroke-width="2.5"/><path d="M46 34 L44 58 M54 34 L56 58" fill="none"/><path d="M32 24 L18 30 L32 30Z"/>',
   small:'<circle cx="56" cy="34" r="16"/><circle cx="72" cy="22" r="9"/><path d="M80 22 L94 24 L80 27Z"/><path d="M40 32 L24 22 L30 38Z"/>',
   owl:'<ellipse cx="60" cy="34" rx="18" ry="22"/><path d="M46 14 L44 4 L54 12 M74 14 L76 4 L66 12" fill="none"/><circle cx="53" cy="24" r="4.5" fill="#f6d77a"/><circle cx="67" cy="24" r="4.5" fill="#f6d77a"/>',
@@ -2761,7 +2823,7 @@ let colFilterSel='all';
 function renderCollections(){
   const found=SPECIES.filter(s=>S.col[s.id]).length;
   $('colCount').textContent=`${found}/${SPECIES.length}`;$('colFound').textContent=`${found} of ${SPECIES.length} found`;
-  const opts=[['all','All'],['fish','Fish'],['insect','Insects'],['bird','Birds'],['flower','Flowers'],['crop','Crops'],['drink','Drinks'],['furniture','Furniture']];
+  const opts=[['all','All'],['fish','Fish'],['insect','Insects'],['critter','Critters'],['bird','Birds'],['flower','Flowers'],['crop','Crops'],['drink','Drinks'],['furniture','Furniture']];
   $('colFilter').innerHTML=opts.map(([k,l])=>`<button class="pbtn" type="button" data-cf="${k}" aria-pressed="${colFilterSel===k}">${l}</button>`).join('');
   if(colFilterSel==='furniture'){$('colGrid').innerHTML=DECOR.filter(f=>f.zone==='home').map(f=>{const e=!!S.earned[f.id];return `<div class="colcard ${e?'':'unfound'}"><span class="tag">Furniture</span>${silSVG({shape:'f_'+f.id,col:'#c8a46a'},e)}<div class="nm">${e?f.name:'Not yet earned'}</div><div class="wh">${e?'Yours to place in the cottage (B)':'Earned by: '+f.earn}</div></div>`;}).join('');return;}
   $('colGrid').innerHTML=SPECIES.filter(s=>colFilterSel==='all'||s.type===colFilterSel).map(s=>{const e=S.col[s.id];
@@ -2818,6 +2880,11 @@ function makeSightModel(sp){
       const wm=new THREE.MeshToonMaterial({color:df?0xeef4f6:col,gradientMap,side:THREE.DoubleSide,transparent:df,opacity:df?0.7:1});
       for(const [w,h,z] of df?[[0.17,0.035,0.035],[0.15,0.03,-0.01]]:[[0.11,0.1,0]])for(const sx of [-1,1]){const geo=new THREE.PlaneGeometry(w,h);geo.translate(w/2,0,0);geo.rotateX(-Math.PI/2);const m=new THREE.Mesh(geo,wm);m.position.z=z;if(sx<0)m.rotation.y=Math.PI;g.add(m);wings.push({m,sx});}
       g.scale.setScalar(1.9);}
+  }else if(sp.shape==='frog'){
+    const b=new THREE.Mesh(new THREE.SphereGeometry(0.1,10,8).scale(1,0.62,1.15),M);b.position.y=0.06;g.add(b);addOutline(b,0.008);
+    for(const sx of [-1,1]){const e=new THREE.Mesh(new THREE.SphereGeometry(0.035,8,6),M);e.position.set(sx*0.05,0.12,0.06);g.add(e);const pu=new THREE.Mesh(new THREE.SphereGeometry(0.018,6,5),dark);pu.position.set(sx*0.058,0.13,0.085);g.add(pu);
+      const lg=new THREE.Mesh(new THREE.SphereGeometry(0.05,8,6).scale(0.7,0.45,1.3),M);lg.position.set(sx*0.09,0.03,-0.04);g.add(lg);}
+    const bel=new THREE.Mesh(new THREE.SphereGeometry(0.08,8,6).scale(1,0.4,1),smat(0xe8e0a0));bel.position.set(0,0.035,0.03);g.add(bel);g.scale.setScalar(1.5);
   }else if(sp.type==='bird'){
     const sh=sp.shape;const sc=sh==='heron'?1.5:sh==='owl'?1.15:0.8;
     const body=new THREE.Mesh(new THREE.SphereGeometry(0.16,10,8).scale(0.85,sh==='owl'?1.25:0.85,sh==='owl'?0.9:1.3),M);body.position.y=sh==='heron'?0.5:0.16;g.add(body);addOutline(body,0.01);
@@ -2841,6 +2908,7 @@ function makeSightModel(sp){
 }
 function spawnSight(sp){
   let p=habitatPoint(sp.hab);if(!p&&sp.hab==='orchard')p=habitatPoint('trees');if(!p)return false;
+  if(sp.hab==='reedbed'&&(sp.shape==='heron'||sp.shape==='frog'))p.y=groundH(p.x,p.z)+0.02;
   const m=makeSightModel(sp);m.g.position.set(p.x,p.y,p.z);m.g.rotation.y=rnd()*6.28;scene.add(m.g);
   SIGHT.list.push({sp,g:m.g,wings:m.wings,x:p.x,y:p.y,z:p.z,t:0,life:rr(70,100),ph:rnd()*10,gl:0});
   return true;
@@ -2865,6 +2933,7 @@ function sightVisuals(t,dt){
     if(ty==='insect'&&s.sp.shape!=='skater'&&s.sp.shape!=='beetle'&&s.sp.shape!=='cricket'){g.position.set(s.x+Math.sin(t*0.9+s.ph)*0.6,s.y+Math.sin(t*2.1+s.ph)*0.15,s.z+Math.cos(t*0.7+s.ph)*0.6);g.rotation.y=t*0.9+s.ph;
       const f=s.sp.shape==='dragonfly'?Math.sin(t*40)*0.3:Math.abs(Math.sin(t*14+s.ph))*1.1+0.2;for(const w of s.wings)w.m.rotation.z=w.sx*f;}
     else if(s.sp.shape==='skater'){g.position.set(s.x+Math.sin(t*0.4+s.ph)*1.2,levelCur+0.02,s.z+Math.cos(t*0.33+s.ph)*1.2);g.rotation.y=t*0.4+s.ph;}
+    else if(s.sp.shape==='frog'){const hp=Math.max(0,Math.sin(t*0.9+s.ph)-0.92)*3;g.position.set(s.x,groundH(s.x,s.z)+0.03+hp,s.z);g.rotation.y=s.ph;}
     else if(ty==='bird'){const hop=Math.max(0,Math.sin(t*3+s.ph))>0.97?0.05:0;g.position.set(s.x,s.y+hop,s.z);g.rotation.y=s.ph+Math.sin(t*0.5+s.ph)*0.7;}
     else if(ty==='flower'){g.rotation.z=Math.sin(t*1.3+s.ph)*0.06;}
     s.gl-=dt;if(s.gl<=0&&Math.hypot(s.x-player.pos.x,s.z-player.pos.z)<40){s.gl=rr(0.8,1.6);_a.setRGB(2.0,1.7,1.0);fxGlow.emit(g.position.x+rr(-0.3,0.3),g.position.y+0.25,g.position.z+rr(-0.3,0.3),0,rr(0.3,0.6),0,_a,0.07,rr(1,1.6),-0.05,0.6,0.15);}
@@ -3355,6 +3424,8 @@ const DECOR=[
   {id:'shelf',name:'Journal shelf',cost:null,zone:'home',earn:'Find 15 entries for your journal'},
   {id:'plant',name:'Potted fern',cost:null,zone:'home',earn:'Harvest 3 crops'},
   {id:'basket',name:"Mira's basket",cost:null,zone:'home',earn:"Hear all of Mira's letters"},
+  {id:'reedbasket',name:'Woven reed basket',cost:null,zone:'home',earn:'Weave a basket at the Reedbeds'},
+  {id:'reedmat',name:'Woven reed mat',cost:null,zone:'home',earn:'Weave a mat at the Reedbeds'},
   {id:'lamp',name:'Oil lamp',cost:null,zone:'home',earn:'Take 3 photos'},
   {id:'ciderrack',name:'Cider rack',cost:null,zone:'home',earn:'Press your first seasonal drink'}
 ];
@@ -3401,6 +3472,11 @@ function makeDecorModel(id,ghost){
   else if(id==='shelf'){boxM(1.2,1.6,0.08,0x7a5a3c,g,0,0.8,-0.15,0.01);for(const x of [-0.58,0.58])boxM(0.06,1.6,0.34,0x5b4130,g,x,0.8,0);for(const y of [0.05,0.55,1.05,1.55])boxM(1.2,0.05,0.34,0x5b4130,g,0,y,0);
     const bc=[0xb5442b,0x4f7fa8,0x58803a,0xe2b13c,0x8a5a34];for(const y of [0.08,0.58,1.08])for(let k=0;k<6;k++)boxM(0.1,0.32+((k*7)%3)*0.05,0.24,bc[(k+y*10|0)%5],g,-0.45+k*0.17,y+0.2,0);}
   else if(id==='plant'){cylM(0.2,0.15,0.32,0xc0643a,g,0,0.16,0,12,0.01);const f=new THREE.Mesh(lumpy(new THREE.IcosahedronGeometry(0.34,1),0.25,3),makeToon(0x4f9a3a,{rim:0.3}));f.position.y=0.55;f.scale.y=0.9;f.castShadow=true;g.add(f);}
+  else if(id==='reedbasket'){for(let k=0;k<5;k++){const b=new THREE.Mesh(new THREE.CylinderGeometry(0.27+k*0.02,0.25+k*0.02,0.07,14,1,true),makeToon(k%2?0xb89a5a:0xcfb06c,{side:THREE.DoubleSide}));b.position.y=0.04+k*0.065;b.castShadow=true;g.add(b);}
+    const bt=new THREE.Mesh(new THREE.CircleGeometry(0.25,14).rotateX(-Math.PI/2),makeToon(0xb89a5a,{}));bt.position.y=0.01;g.add(bt);
+    const h=new THREE.Mesh(new THREE.TorusGeometry(0.3,0.022,6,16,Math.PI),makeToon(0xa8884a,{}));h.position.y=0.34;g.add(h);}
+  else if(id==='reedmat'){const W2=1.5,D2=0.9;for(let k=0;k<9;k++){const st=new THREE.Mesh(new THREE.BoxGeometry(W2,0.025,D2/9-0.008),makeToon(k%2?0xc2a462:0xd6ba78,{}));st.position.set(0,0.015,-D2/2+(k+0.5)*D2/9);st.receiveShadow=true;g.add(st);}
+    for(const x of [-W2/2,W2/2]){const e=new THREE.Mesh(new THREE.BoxGeometry(0.06,0.04,D2+0.04),makeToon(0x8a6a3a,{}));e.position.set(x,0.02,0);g.add(e);}}
   else if(id==='basket'){const b=new THREE.Mesh(new THREE.CylinderGeometry(0.32,0.24,0.3,16,1,true),makeToon(0xc8a05a,{side:THREE.DoubleSide}));b.position.y=0.15;b.castShadow=true;g.add(b);
     const h=new THREE.Mesh(new THREE.TorusGeometry(0.28,0.025,6,16,Math.PI),makeToon(0xb08a4a,{}));h.position.y=0.3;g.add(h);for(let k=0;k<3;k++){const a=new THREE.Mesh(new THREE.SphereGeometry(0.09,8,6),appleMat);a.position.set((k-1)*0.13,0.3,0);g.add(a);}}
   else if(id==='lamp'){cylM(0.18,0.22,0.06,0x5b4130,g,0,0.03,0,10);cylM(0.03,0.03,1.2,0x3a3530,g,0,0.63,0,6);const gl=new THREE.Mesh(new THREE.SphereGeometry(0.14,12,10),makeToon(0x3a2a1c,{emissive:0xffb35c,noHeal:true}));gl.position.y=1.3;g.add(gl);
@@ -3493,13 +3569,43 @@ const home=(()=>{
   const sr=seededRnd(808);
   const ruinWall=(x0,z0,x1,z1,gapA,gapB)=>{const L=Math.hypot(x1-x0,z1-z0),n=Math.round(L/0.9);for(let i=0;i<n;i++){const t=(i+0.5)/n;const u=t*L-L/2;if(u>gapA&&u<gapB)continue;if(sr()<0.18)continue;
     const h=0.4+sr()*1.4;const x=lerp(x0,x1,t),z=lerp(z0,z1,t);const along=Math.abs(x1-x0)>0.1;boxM(along?0.9:0.32,h,along?0.32:0.9,[0x958b78,0x8a8070,0xa39985][(sr()*3)|0],ruin,x,0.25+h/2,z,0.012,0,0,(sr()-0.5)*0.06);}};
-  ruinWall(-HX,-HZ,HX,-HZ,-0.7,0.7);ruinWall(-HX,HZ,HX,HZ,99,99);ruinWall(-HX,-HZ,-HX,HZ,99,99);ruinWall(HX,-HZ,HX,HZ,99,99);
+  /* v7: the ruin as coursed fieldstone with mossy tops, ivy, charred timbers and slumped thatch */
+  const STC=[0x8f8778,0x9d9483,0x847c6e,0xa69d8a],MOSS=[0x5f7a3a,0x6d8a40],IVY=[0x3f6a32,0x4f7d3a,0x5a8a3e],THC=[0xb08a52,0x9c7a48,0xc29b5e];
+  const leafAt=(par,x,y,z,along,c)=>boxM(along?0.17:0.05,0.15,along?0.05:0.17,c,par,x,y,z,0,(sr()-0.5)*0.6,0,(sr()-0.5)*0.9);
+  const stoneWall=(x0,z0,x1,z1,gapA,gapB,hMin,hMax,ph)=>{const L=Math.hypot(x1-x0,z1-z0),dx=(x1-x0)/L,dz=(z1-z0)/L,along=Math.abs(dx)>0.5;
+    let nx=-dz,nz=dx;if(((x0+x1)/2)*nx+((z0+z1)/2)*nz<0){nx=-nx;nz=-nz;}
+    const ROW=0.27,topAt=u=>hMin+(hMax-hMin)*clamp(0.5+0.5*Math.sin(u*1.3+ph)*Math.cos(u*0.55+ph*2)+0.25*Math.sin(u*3.7+ph),0,1);
+    const P=(u,o)=>({x:(x0+x1)/2+dx*u+nx*o,z:(z0+z1)/2+dz*u+nz*o});
+    for(let r=0;r<9;r++){let u=-L/2+(r%2?0.28:0);const y=0.25+ROW*r+ROW/2;
+      while(u<L/2-0.1){const len=0.4+sr()*0.36;const lw=Math.min(len,L/2-u)-0.04;const uc=u+lw/2;u+=len;
+        if(lw<0.14||(uc>gapA&&uc<gapB)||y+ROW/2>0.25+topAt(uc))continue;
+        const c=P(uc,(sr()-0.5)*0.05);const dep=0.34+sr()*0.06;
+        boxM(along?lw:dep,ROW-0.035,along?dep:lw,STC[(sr()*4)|0],ruin,c.x,y,c.z,0,0,(sr()-0.5)*0.05,0);
+        if(y+ROW*1.5>0.25+topAt(uc)&&sr()<0.75)boxM(along?lw*0.92:0.44,0.07,along?0.44:lw*0.92,MOSS[(sr()*2)|0],ruin,c.x,y+ROW/2+0.025,c.z,0,0,(sr()-0.5)*0.1,0);
+        else if(r<2&&sr()<0.18){const m=P(uc,0.2);boxM(along?lw*0.7:0.06,0.12,along?0.06:lw*0.7,MOSS[1],ruin,m.x,y,m.z);}}}
+    for(let k=0;k<3;k++){if(sr()<0.3)continue;let uc=(sr()-0.5)*L*0.8;if(uc>gapA-0.4&&uc<gapB+0.4)continue;const top=0.25+topAt(uc);
+      for(let y=0.35;y<top+0.05;y+=0.12){uc+=(sr()-0.5)*0.12;for(let j=0;j<2;j++){const q=P(uc+(sr()-0.5)*0.42,0.2+sr()*0.04);leafAt(ruin,q.x,y+(sr()-0.5)*0.08,q.z,along,IVY[(sr()*3)|0]);}}
+      for(let j=0;j<4;j++){const q=P(uc+(sr()-0.5)*0.5,0);boxM(0.2,0.08,0.2,IVY[(sr()*3)|0],ruin,q.x,top+0.06,q.z,0,(sr()-0.5)*0.5,sr()*3,0);}}
+  };
+  stoneWall(-HX,-HZ,HX,-HZ,-0.75,0.75,0.6,2.2,0.4);stoneWall(-HX,HZ,HX,HZ,99,99,1.0,2.4,2.1);stoneWall(-HX,-HZ,-HX,HZ,99,99,0.45,2.0,4.3);stoneWall(HX,-HZ,HX,HZ,99,99,0.3,1.6,1.2);
+  for(const [x,z] of [[-HX,-HZ],[HX,-HZ],[-HX,HZ],[HX,HZ]]){const qh=0.9+sr()*1.3;for(let y=0.38;y<qh;y+=0.27)boxM(0.44,0.24,0.44,STC[(sr()*4)|0],ruin,x,y,z,0,0,(sr()-0.5)*0.2,0);}
+  /* a corner of roof still hanging on: two rafters, a purlin and a sagging hank of thatch */
+  boxM(0.16,3.0,0.16,0x3a2e24,ruin,-2.2,1.85,1.7,0,0.25,0,0.62);boxM(0.16,3.0,0.16,0x3a2e24,ruin,-2.2,1.85,0.2,0,-0.1,0,0.62);boxM(0.14,0.14,2.2,0x3a2e24,ruin,-1.6,2.55,0.95);
+  for(let k=0;k<4;k++)boxM(0.9,0.14,1.9-k*0.25,THC[k%3],ruin,-2.05+k*0.33,2.05+k*0.32,0.95+(sr()-0.5)*0.2,0,(sr()-0.5)*0.12,0,0.62+(sr()-0.5)*0.15);
+  for(let k=0;k<7;k++){const a=sr()*6.28,r=0.6+sr()*2.4;boxM(0.7+sr()*0.6,0.1,0.5+sr()*0.4,THC[(sr()*3)|0],ruin,Math.cos(a)*r*1.1,0.3+sr()*0.08,Math.sin(a)*r*0.8,0,(sr()-0.5)*0.4,sr()*3,(sr()-0.5)*0.4);}
+  boxM(2.0,0.2,0.22,0x2f2620,ruin,0.3,0.42,-HZ-0.7,0,0.15,0.4,0.12);boxM(0.2,0.2,2.4,0x3a2e24,ruin,1.4,0.38,0.4,0,0.1,0.25,0);
+  for(let k=0;k<10;k++){const a=sr()*6.28,r=HX+0.3+sr()*0.6;boxM(0.24,0.1+sr()*0.18,0.24,MOSS[(sr()*2)|0],ruin,Math.cos(a)*r,0.12,Math.sin(a)*r*0.8,0,0,sr()*3,0);}
   for(let i=0;i<9;i++)boxM(0.3+sr()*0.4,0.2+sr()*0.2,0.3+sr()*0.4,0x8a8070,ruin,(sr()-0.5)*5.5,0.32,(sr()-0.5)*4.2,0,sr()*3,sr()*3,sr()*3);
   boxM(0.18,3.4,0.18,0x2f2620,ruin,-1.2,1.0,0.6,0,0.2,0,1.0);boxM(0.18,3.0,0.18,0x2f2620,ruin,1.5,0.7,-0.8,0,-0.4,0.6,1.2);
   for(const [x,z] of [[-HX,-HZ],[HX,-HZ],[-HX,HZ],[HX,HZ]])boxM(0.24,HWH+0.1,0.24,WD,roofG,x,0.25+HWH/2,z,0.015);
   boxM(6.8,0.2,0.2,WD,roofG,0,HWH+0.28,-HZ,0.01);boxM(6.8,0.2,0.2,WD,roofG,0,HWH+0.28,HZ,0.01);
   gableRoof(6.6,5.2,2.1,0xb08a52,roofG,0,HWH+0.3,0,0.03);
   boxM(0.3,0.25,6.2,0x8a6a3e,roofG,0,HWH+2.35,0,0.01);
+  { const ang=Math.atan2(2.1,3.65),Ls=Math.hypot(2.1,3.65);
+    for(const sd of [-1,1])for(let k=0;k<6;k++){const t=(k+0.5)/6;const x=sd*3.65*(1-t),y=HWH+0.3+2.1*t+0.12;
+      boxM(Ls/6+0.45,0.22,6.05-(k%2)*0.14,THC[(k+(sd>0?1:0))%3],roofG,x,y-0.04,0,0,0,0,sd*ang);}
+    for(const sd of [-1,1])boxM(0.5,0.3,6.2,0x8a6a3e,roofG,sd*3.55,HWH+0.2,0,0,0,0,sd*ang);
+    boxM(0.5,0.34,6.3,0x6f5432,roofG,0,HWH+2.42,0,0.01);for(let k=-2;k<=2;k++)boxM(0.62,0.12,0.12,0x4a3a2a,roofG,0,HWH+2.5,k*1.35,0,0,0,Math.PI/4); }
   const wallPanel=(w,h,x,y,z,along)=>boxM(along?w:0.3,h,along?0.3:w,PL,walls,x,y,z,0.012);
   wallPanel(2.65,HWH,-1.92,0.25+HWH/2,-HZ,true);wallPanel(2.65,HWH,1.92,0.25+HWH/2,-HZ,true);wallPanel(1.3,0.55,0,0.25+HWH-0.27,-HZ,true);
   wallPanel(6.5,HWH,0,0.25+HWH/2,HZ,true);wallPanel(5.1,HWH,-HX,0.25+HWH/2,0,false);wallPanel(5.1,HWH,HX,0.25+HWH/2,0,false);
@@ -3509,6 +3615,25 @@ const home=(()=>{
   const glass=makeToon(0x58697a,{emissive:0xffb35c,noHeal:true,tag:'millglass'});
   for(const [x,z,rot] of [[HX,0.6,true],[-HX,-0.6,true],[1.6,HZ,false]]){const w=new THREE.Mesh(new THREE.BoxGeometry(rot?0.38:0.9,0.8,rot?0.9:0.38),glass);w.position.set(x,1.55,z);walls.add(w);
     boxM(rot?0.4:1.04,0.08,rot?1.04:0.4,0xd9c39a,walls,x,1.98,z);boxM(rot?0.42:1.1,0.08,rot?1.1:0.42,0xd9c39a,walls,x,1.12,z);}
+  { const DK=0x4a3426;
+    for(const [x,z,al] of [[-3.0,-HZ,1],[-0.9,-HZ,1],[0.65,-HZ,1],[3.0,-HZ,1],[-3.0,HZ,1],[-0.6,HZ,1],[0.6,HZ,1],[3.0,HZ,1],[-HX,-2.3,0],[-HX,0.4,0],[-HX,2.3,0],[HX,-2.3,0],[HX,-0.3,0],[HX,2.3,0]])
+      boxM(al?0.2:0.36,HWH-0.1,al?0.36:0.2,DK,walls,x,0.25+HWH/2,z,0);
+    for(let x=-HX;x<=HX+0.01;x+=0.55)for(const sz of [-1,1])boxM(0.5,0.3,0.42,STC[(sr()*4)|0],walls,x+(sr()-0.5)*0.05,0.2,sz*(HZ+0.04),0);
+    for(let z=-HZ+0.3;z<=HZ-0.2;z+=0.55)for(const sx of [-1,1])boxM(0.42,0.3,0.5,STC[(sr()*4)|0],walls,sx*(HX+0.04),0.2,z,0);
+    for(let x=-3.3;x<=3.31;x+=0.36)boxM(0.34,0.08,1.25,x%0.72<0.36?0x9a7650:0x8f6c48,walls,x,0.28,-HZ-0.85,0);
+    for(const x of [-3.2,3.2,-1.4])cylM(0.07,0.08,0.4,DK,walls,x,0.15,-HZ-1.4,6);
+    for(const x of [-3.2,3.2])cylM(0.08,0.09,2.3,DK,walls,x,1.55,-HZ-1.38,6);
+    boxM(7.2,0.1,1.7,0x8a6a3e,walls,0,2.62,-HZ-0.9,0,-0.28,0,0);boxM(7.2,0.14,0.14,DK,walls,0,2.48,-HZ-1.4,0);
+    const flowers=[0xe8708a,0xf2b84b,0xffffff,0xb28ae0];
+    const winDeco=(x,z,rot)=>{const nx=rot?Math.sign(x):0,nz=rot?0:Math.sign(z);const ox=x+nx*0.26,oz=z+nz*0.26;
+      for(const sd of [-1,1])boxM(rot?0.06:0.42,0.86,rot?0.42:0.06,0x6f8a8c,walls,ox+(rot?0:sd*0.72),1.55,oz+(rot?sd*0.72:0),0,0,rot?sd*0.5:-sd*0.5*nz,0);
+      boxM(rot?0.3:1.0,0.2,rot?1.0:0.3,0x7a5030,walls,ox+nx*0.06,1.03,oz+nz*0.06,0);
+      for(let k=0;k<6;k++){const u=(k-2.5)*0.15;boxM(0.12,0.12,0.12,flowers[(sr()*4)|0],walls,ox+nx*0.08+(rot?0:u),1.2,oz+nz*0.08+(rot?u:0),0);}
+      addGlow(walls,ox+nx*0.15,1.55,oz+nz*0.15,1.7,0xffc070);const pl=makeLightPool(0,0,1.7,walls);pl.position.set(x+nx*1.5,0.3,z+nz*1.5);};
+    winDeco(HX,0.6,true);winDeco(-HX,-0.6,true);winDeco(1.6,HZ,false);
+    { const w=new THREE.Mesh(new THREE.BoxGeometry(0.9,0.8,0.36),glass);w.position.set(1.95,1.55,-HZ);walls.add(w);boxM(1.04,0.08,0.4,0xd9c39a,walls,1.95,1.98,-HZ);boxM(1.1,0.08,0.42,0xd9c39a,walls,1.95,1.12,-HZ);winDeco(1.95,-HZ,false); }
+    for(let k=0;k<5;k++)for(let j=0;j<4-(k>2?1:0);j++){const l=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,1.1,7).rotateX(Math.PI/2),makeToon(j%2?0x8a6440:0x9c7550,{}));l.position.set(-HX-0.55-j*0.25,0.4+k*0.23,1.0+(k%2)*0.12);l.castShadow=true;walls.add(l);}
+  }
   const door=new THREE.Group();door.position.set(-0.6,0.25,-HZ);walls.add(door);boxM(1.1,2.0,0.08,0x7a5030,door,0.55,1.0,0,0.01);door.rotation.y=-1.25;
   boxM(1.7,1.1,0.7,0x8f8574,hearth,0,0.8,HZ-0.5,0.015);
   const fireBox=new THREE.Mesh(new THREE.BoxGeometry(0.8,0.55,0.12),makeToon(0x1e140c,{noHeal:true}));fireBox.position.set(0,0.62,HZ-0.86);hearth.add(fireBox);
@@ -3640,6 +3765,65 @@ function layoutGather(){for(const G3 of GATHER)G3.g.visible=gatherAvail(G3);}
    The Reedbeds, upstream past the waterfall: misty gated path, reeds to cut, a boardwalk to mend
    ================================================================ */
 const FALL=(()=>{let best=0,at=null;for(let s0=30;s0<120;s0+=0.5){const p=polyPoint(INLET,s0),q=polyPoint(INLET,s0+1);const d=Math.abs(groundH(q.x,q.z)-groundH(p.x,p.z));if(d>best){best=d;at={x:p.x,z:p.z,drop:d};}}return at;})();
+/* v7: the Reedbeds waterfall as layered translucent sheets, a foam pool at its foot and drifting mist */
+const FALLS=(()=>{const L=polyLength(INLET);let a=-1,b=-1;for(let s0=95;s0<L-6;s0+=0.5){const p=polyPoint(INLET,s0),q=polyPoint(INLET,s0+1);const d=groundH(q.x,q.z)-groundH(p.x,p.z);
+    if(d>0.5){if(a<0)a=s0;b=s0+1;}else if(a>=0&&s0>b+2)break;}
+  if(a<0)return null;const pb=polyPoint(INLET,a),pt=polyPoint(INLET,b);return {s0:a,s1:b,x:pb.x,z:pb.z,y:groundH(pb.x,pb.z),tx:pb.tx,tz:pb.tz,top:groundH(pt.x,pt.z),sheets:[],foam:null};})();
+if(FALLS){
+  const mkSheet=(off,hw,sp,seed,op)=>{const pos=[],uv=[],idx=[];let n=0;const sA=FALLS.s0-1.5,sB=FALLS.s1+0.6;
+    for(let s0=sA;s0<=sB+0.01;s0+=0.33){const p=polyPoint(INLET,s0);const nx=-p.tz,nz=p.tx;const y=groundH(p.x,p.z)+0.32+off*0.4;const ox=-p.tx*off,oz=-p.tz*off;
+      pos.push(p.x+ox-nx*hw,y,p.z+oz-nz*hw,p.x+ox+nx*hw,y,p.z+oz+nz*hw);uv.push(0,s0,1,s0);if(n>0){const q=(n-1)*2;idx.push(q,q+2,q+1,q+1,q+2,q+3);}n++;}
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(idx);
+    const u=THREE.UniformsUtils.merge([THREE.UniformsLib.fog,{uLit:{value:1},uSpeed:{value:sp},uSeed:{value:seed},uOp:{value:op},uS0:{value:sA},uS1:{value:sB}}]);u.uTime=G.uTime;
+    const m=new THREE.Mesh(g,new THREE.ShaderMaterial({uniforms:u,transparent:true,depthWrite:false,side:THREE.DoubleSide,fog:true,
+      vertexShader:`varying vec2 vUv;
+        #include <fog_pars_vertex>
+        void main(){ vUv=uv; vec4 mvPosition=modelViewMatrix*vec4(position,1.0); gl_Position=projectionMatrix*mvPosition;
+          #include <fog_vertex>
+        }`,
+      fragmentShader:`varying vec2 vUv; uniform float uTime,uLit,uSpeed,uSeed,uOp,uS0,uS1;
+        ${NOISE_GLSL}
+        #include <fog_pars_fragment>
+        void main(){
+          float across=abs(vUv.x-0.5)*2.0; float f=vUv.y*0.45+uTime*uSpeed;
+          float st=n21(vec2(vUv.x*7.0+uSeed,f))*0.65+n21(vec2(vUv.x*21.0+uSeed*3.1,f*2.4))*0.35;
+          vec3 col=mix(vec3(0.5,0.72,0.78),vec3(0.97,0.99,1.0),smoothstep(0.38,0.82,st));
+          float a=(0.16+0.6*smoothstep(0.42,0.88,st))*(1.0-smoothstep(0.6,1.0,across))*uOp;
+          a*=smoothstep(uS0,uS0+1.0,vUv.y)*(1.0-smoothstep(uS1-0.7,uS1,vUv.y));
+          col*=mix(0.22,1.0,uLit);
+          gl_FragColor=vec4(col,a);
+          #include <fog_fragment>
+          ${OUT_GLSL}
+        }`}));
+    m.renderOrder=4;m.frustumCulled=false;scene.add(m);FALLS.sheets.push(u);};
+  mkSheet(0.12,1.45,2.2,1.3,0.9);mkSheet(0.42,1.2,3.0,7.7,0.75);mkSheet(0.78,0.95,3.9,4.2,0.6);
+  const fu=THREE.UniformsUtils.merge([THREE.UniformsLib.fog,{uLit:{value:1}}]);fu.uTime=G.uTime;
+  const foam=new THREE.Mesh(new THREE.CircleGeometry(3.4,40).rotateX(-Math.PI/2),new THREE.ShaderMaterial({uniforms:fu,transparent:true,depthWrite:false,fog:true,
+    vertexShader:`varying vec2 vP;
+      #include <fog_pars_vertex>
+      void main(){ vP=position.xz; vec4 mvPosition=modelViewMatrix*vec4(position,1.0); gl_Position=projectionMatrix*mvPosition;
+        #include <fog_vertex>
+      }`,
+    fragmentShader:`varying vec2 vP; uniform float uTime,uLit;
+      ${NOISE_GLSL}
+      #include <fog_pars_fragment>
+      void main(){ float r=length(vP)/3.4; float an=atan(vP.y,vP.x);
+        float rings=n21(vec2(an*5.0,r*7.0-uTime*1.6))*0.6+n21(vec2(an*11.0+3.0,r*13.0-uTime*2.3))*0.4;
+        float a=smoothstep(0.45,0.8,rings+0.35*(1.0-r))*(1.0-smoothstep(0.55,1.0,r))*0.85;
+        gl_FragColor=vec4(vec3(0.96,0.98,1.0)*mix(0.22,1.0,uLit),a);
+        #include <fog_fragment>
+        ${OUT_GLSL}
+      }`}));
+  foam.position.set(FALLS.x-FALLS.tx*0.6,FALLS.y+0.36,FALLS.z-FALLS.tz*0.6);foam.renderOrder=5;scene.add(foam);FALLS.foam=fu;
+}
+function fallsVisuals(dt){
+  if(!FALLS)return;const lit=inletU.uLit.value;for(const u of FALLS.sheets)u.uLit.value=lit;FALLS.foam.uLit.value=lit;
+  if(dt<=0||Math.hypot(player.pos.x-FALLS.x,player.pos.z-FALLS.z)>60)return;
+  const bx=FALLS.x-FALLS.tx*0.8,bz=FALLS.z-FALLS.tz*0.8;
+  if(rnd()<dt*16){_a.setRGB(0.96,0.98,1).multiplyScalar(lerp(1,0.3,nightF));fxSoft.emit(bx+rr(-1.6,1.6),FALLS.y+rr(0.2,1.2),bz+rr(-1.6,1.6),rr(-0.5,0.5)-FALLS.tx*0.4,rr(0.25,0.7),rr(-0.5,0.5)-FALLS.tz*0.4,_a,rr(1.0,2.0),rr(3,5.5),-0.03,0.5,0.25,0.22);}
+  if(rnd()<dt*7){const k=rnd();_a.setRGB(0.95,0.97,1).multiplyScalar(lerp(1,0.3,nightF));fxSoft.emit(bx+rr(-2.5,2.5)-FALLS.tx*rr(1,6),FALLS.y+rr(0.4,2.5),bz+rr(-2.5,2.5)-FALLS.tz*rr(1,6),rr(-0.3,0.3),rr(0.02,0.12),rr(-0.3,0.3),_a,rr(1.6,2.6),rr(6,9),-0.005,0.15,0.3,0.1);}
+  if(rnd()<dt*22){_a.setRGB(1,1,1).multiplyScalar(lerp(1,0.35,nightF));fxSoft.emit(bx+rr(-1.1,1.1),FALLS.y+0.4,bz+rr(-1.1,1.1),rr(-1,1),rr(1.0,2.2),rr(-1,1),_a,rr(0.12,0.25),rr(0.5,0.9),2.4,0.4,0,0.7);}
+}
 const rbGate=(()=>{
   const g=new THREE.Group();const a=RPATH[0],b=RPATH[1];const dx=b[0]-a[0],dz=b[1]-a[1],l=Math.hypot(dx,dz);const tx=dx/l,tz=dz/l,nx=-tz,nz=tx;
   g.position.set(a[0],groundH(a[0],a[1]),a[1]);g.rotation.y=Math.atan2(tx,tz);scene.add(g);
@@ -3678,7 +3862,7 @@ const rbHeron=(()=>{const m=makeSightModel(SPECIES_BY_ID.heron);const last=BW[BW
 function rbStage(){if(oStage()<4)return -1;return S.reed.bw.every(Boolean)?1:0;}
 function rbPct(){return S.reed.bw.filter(Boolean).length*20;}
 function setBoardwalk(i,on){S.reed.bw[i]=on;boardwalk[i].fixed.visible=on;boardwalk[i].broken.visible=!on;}
-function syncReedbed(){const st=rbStage();rbGate.open=st>=0;rbHeron.visible=st>=0;boardwalk.forEach((b,i)=>setBoardwalk(i,!!S.reed.bw[i]));layoutRbReeds();
+function syncReedbed(){if(typeof syncWeave==='function')try{syncWeave();}catch(e){}const st=rbStage();rbGate.open=st>=0;rbHeron.visible=st>=0;boardwalk.forEach((b,i)=>setBoardwalk(i,!!S.reed.bw[i]));layoutRbReeds();
   if(st>=1){if(mira.state==='away')miraArrive(true);}else{mira.state='away';mira.root.visible=false;}}
 function mendBoardwalk(b){
   S.inv.wood-=1;S.inv.reed-=2;toast('-1 wood, -2 reeds');SFX.page();for(let i=0;i<4;i++)SFX.knock(0.15+i*0.25,rr(200,280));
@@ -3689,6 +3873,8 @@ function mendBoardwalk(b){
   else writeSave();
 }
 function reedbedVisuals(t,dt){
+  fallsVisuals(dt);
+  reedBoatStep(t,dt);
   rbGate.k=damp(rbGate.k,rbGate.open?1:0,1.5,dt);for(const L of rbGate.leaves)L.lf.rotation.y=L.sd*rbGate.k*1.5;
   const near=Math.hypot(player.pos.x-RPATH[1][0],player.pos.z-RPATH[1][1])<45||rbDist(player.pos.x,player.pos.z)<40;
   if(near&&dt>0&&rnd()<dt*(rbGate.open?6:14)){const i=(rnd()*(RPATH.length-1))|0;const p0=RPATH[i],p1=RPATH[i+1],k=rnd();const x=lerp(p0[0],p1[0],k)+rr(-3,3),z=lerp(p0[1],p1[1],k)+rr(-3,3);
@@ -3754,6 +3940,81 @@ function miraTalk(){
 }
 
 /* ================================================================
+   v7: weaving at the Reedbeds (a basket, a mat, a little reed boat) and floating the boat down to Mill Pond
+   ================================================================ */
+const WEAVE=(()=>{const L=polyLength(INLET);let s0=0,best=1e9;for(let q=60;q<L;q+=0.5){const p=polyPoint(INLET,q);const d=rbDist(p.x,p.z);if(d<best){best=d;s0=q;}}
+  const p=polyPoint(INLET,s0+5);const nx=-p.tz,nz=p.tx;return {s:s0+4,x:p.x+nx*9.5,z:p.z+nz*9.5,lx:p.x+nx*2.6,lz:p.z+nz*2.6,nx,nz,ry:Math.atan2(-nx,-nz)};})();
+const WEAVES=[
+  {id:'basket',name:'a reed basket',cost:{reed:3},furn:'reedbasket',card:{k:'The Reedbeds · weaving',t:'A basket, a little lopsided',s:'Mira says the lopsided ones hold the most. She does not explain.'}},
+  {id:'mat',name:'a reed mat',cost:{reed:4},furn:'reedmat',card:{k:'The Reedbeds · weaving',t:'A mat for the doorstep',s:'It smells of the stream. Muddy boots will love it.'}},
+  {id:'boat',name:'a little reed boat',cost:{reed:5,wood:1},furn:null,card:{k:'The Reedbeds · weaving',t:'A boat the size of a loaf',s:'Mira tucks a stub of candle in the bow. "For the pond," she says. "Grandmother always sent one down."'}}];
+const reedCost=c=>Object.entries(c).map(([k,v])=>`${v} ${k==='reed'?'reeds':k}`).join(' and ');
+function nextWeave(){return WEAVES.find(w=>!S.reed.woven[w.id])||null;}
+function makeReedBoat(){const g=new THREE.Group();const RM=makeToon(0xcfb06c,{noHeal:true}),RD=makeToon(0xa8884a,{noHeal:true});
+  for(const sx of [-1,1]){const b=new THREE.Mesh(new THREE.CapsuleGeometry(0.09,0.62,4,8).rotateX(Math.PI/2),RM);b.position.set(sx*0.08,0.06,0);b.castShadow=true;g.add(b);}
+  const keel=new THREE.Mesh(new THREE.CapsuleGeometry(0.07,0.5,4,8).rotateX(Math.PI/2),RD);keel.position.set(0,0.0,0);g.add(keel);
+  for(const z of [-0.26,0,0.26]){const band=new THREE.Mesh(new THREE.TorusGeometry(0.17,0.018,5,12).rotateY(Math.PI/2),RD);band.position.set(0,0.05,z);band.scale.set(1,0.7,1);g.add(band);}
+  const prow=new THREE.Mesh(new THREE.TorusGeometry(0.1,0.035,5,10,Math.PI*1.2),RM);prow.position.set(0,0.16,0.42);prow.rotation.y=Math.PI/2;g.add(prow);
+  const cdl=new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,0.1,8),makeToon(0xf4ecd8,{noHeal:true}));cdl.position.set(0,0.16,0.2);g.add(cdl);
+  const fl=new THREE.Mesh(new THREE.ConeGeometry(0.022,0.07,6),new THREE.MeshBasicMaterial({color:new THREE.Color(2.4,1.3,0.45)}));fl.position.set(0,0.245,0.2);g.add(fl);
+  const halo=new THREE.Sprite(new THREE.SpriteMaterial({map:POOL_TEX,color:0xffb35c,transparent:true,opacity:0.7,blending:THREE.AdditiveBlending,depthWrite:false,fog:false}));halo.position.set(0,0.25,0.2);halo.scale.setScalar(0.9);g.add(halo);
+  g.scale.setScalar(1.3);return {g,fl,halo};}
+const weaveSite=(()=>{
+  const g=new THREE.Group();g.position.set(WEAVE.x,groundH(WEAVE.x,WEAVE.z),WEAVE.z);g.rotation.y=WEAVE.ry;scene.add(g);
+  const DK=0x5b4130,RC=0xcfb06c;
+  for(const sx of [-1,1]){boxM(0.1,1.5,0.1,DK,g,sx*0.75,0.72,0,0.008,0.12,0,0);}
+  boxM(1.7,0.1,0.1,DK,g,0,1.42,-0.08,0.008);boxM(1.7,0.1,0.1,DK,g,0,0.35,0.1,0.008);
+  for(let k=0;k<11;k++)boxM(0.025,1.05,0.025,RC,g,-0.62+k*0.124,0.88,0.01,0,0.12,0,0);
+  for(let k=0;k<5;k++)boxM(1.36,0.05,0.04,k%2?0xb89a5a:RC,g,0,0.55+k*0.08,0.04+k*0.01,0,0.12,0,0);
+  cylM(0.22,0.24,0.38,0x7a5a3c,g,0,0.19,1.0,10,0.008);
+  for(let k=0;k<3;k++)cylM(0.04,0.04,1.4,RC,g,1.2+k*0.1,0.06,0.5,5,0,{}).rotation.set(Math.PI/2,0,0.3*k);
+  const items={};const bk=makeDecorModel('reedbasket',false);bk.g.position.set(-1.25,0,0.7);g.add(bk.g);items.basket=bk.g;
+  const mt=makeDecorModel('reedmat',false);mt.g.position.set(0,0.0,1.9);g.add(mt.g);items.mat=mt.g;
+  const bt=makeReedBoat();bt.g.position.set(1.3,0.05,1.3);bt.g.rotation.y=0.6;g.add(bt.g);items.boat=bt.g;
+  addCollider(WEAVE.x,WEAVE.z,0.9);
+  return {g,items};
+})();
+const reedBoat=(()=>{const b=makeReedBoat();b.g.visible=false;scene.add(b.g);return b;})();
+let boatRun=null;
+const BOAT_REST=(()=>{const a=INLET[0],L=Math.hypot(a[0],a[1]);return {x:a[0]*(1-9/L),z:a[1]*(1-9/L)};})();
+function syncWeave(){const sw=S.reed.woven;weaveSite.items.basket.visible=!!sw.basket;weaveSite.items.mat.visible=!!sw.mat;weaveSite.items.boat.visible=!!sw.boat&&!S.reed.floated&&!boatRun;
+  if(S.reed.floated&&!boatRun){reedBoat.g.visible=true;reedBoat.g.position.set(BOAT_REST.x,levelCur+0.04,BOAT_REST.z);}else if(!boatRun)reedBoat.g.visible=false;}
+function weaveNext(){
+  const w=nextWeave();if(!w)return;for(const [k,v] of Object.entries(w.cost))S.inv[k]-=v;toast(`-${reedCost(w.cost)}`);
+  SFX.rustle();SFX.page();for(let i=0;i<6;i++)SFX.knock(0.2+i*0.3,rr(320,420));player.busy=Math.max(player.busy,1.6);
+  after(1.8,()=>{S.reed.woven[w.id]=true;syncWeave();sparkle(WEAVE.x,groundH(WEAVE.x,WEAVE.z)+1,WEAVE.z,18);auSwell();player.happy=4;showCardBrief(w.card);
+    if(w.furn)grantFurniture(w.furn);
+    if(w.id==='boat')after(4.8,()=>toast('Set the boat on the stream when you are ready. It knows the way down.'));
+    hud.tasksHTML='';writeSave();});
+}
+function launchBoat(){
+  if(boatRun||!S.reed.woven.boat||S.reed.floated)return;
+  boatRun={s:WEAVE.s,x:WEAVE.lx,z:WEAVE.lz,phase:'stream',t:0,k:0,fx:0,fz:0};weaveSite.items.boat.visible=false;reedBoat.g.visible=true;
+  SFX.splash();addRipple(WEAVE.lx,WEAVE.lz,1.2);SFX.moment();
+  toast(mira.state==='home'?'Mira, softly: "Go on, little boat."':'The little boat turns once, then finds the current.');
+  after(3.5,()=>toast('Follow it down to Mill Pond, if you like.'));hud.tasksHTML='';
+}
+function boatArrive(){
+  boatRun=null;S.reed.floated=true;const x=reedBoat.g.position.x,z=reedBoat.g.position.z;
+  sparkle(x,levelCur+0.5,z,26);auSwell();SFX.moment();
+  if(Math.hypot(player.pos.x-x,player.pos.z-z)<45)player.happy=6;
+  showCardBrief({k:'Mill Pond · a small ceremony',t:'The reed boat comes home',s:'It turns once in the still water and settles, candle and all, as if it knew the way.'});
+  const kp='Reed boat · sailed down to Mill Pond';if(!S.keepsakes.includes(kp))S.keepsakes.push(kp);
+  hud.tasksHTML='';writeSave();
+}
+function reedBoatStep(t,dt){
+  const b=reedBoat;b.fl.scale.y=0.85+0.25*Math.sin(t*13)*Math.sin(t*7.7+1);b.halo.material.opacity=0.45+0.35*lerp(0.4,1,nightF);
+  if(boatRun&&dt>0){const r=boatRun;r.t+=dt;
+    if(r.phase==='stream'){const sp=lerp(0.6,2.2,clamp(r.t/3,0,1));r.s-=dt*sp;const p=polyPoint(INLET,r.s);const nx=-p.tz,nz=p.tx;const sway=Math.sin(r.t*0.7)*0.35;
+      r.x=p.x+nx*sway;r.z=p.z+nz*sway;const y=Math.max(groundH(r.x,r.z)+0.34,levelCur+0.04);b.g.position.set(r.x,y,r.z);b.g.rotation.y=Math.atan2(-p.tx,-p.tz)+Math.sin(r.t*1.3)*0.15;
+      if(rnd()<dt*3)addRipple(r.x,r.z,0.4);
+      if(r.s<=4||levelCur-groundH(r.x,r.z)>0.6){r.phase='pond';r.t=0;r.fx=r.x;r.fz=r.z;}}
+    else{const k=ease(clamp(r.t/12,0,1));r.x=lerp(r.fx,BOAT_REST.x,k);r.z=lerp(r.fz,BOAT_REST.z,k);b.g.position.set(r.x,levelCur+0.04,r.z);b.g.rotation.y+=dt*0.25*(1-k);
+      if(rnd()<dt*1.5)addRipple(r.x,r.z,0.6);if(r.t>=12)boatArrive();}
+  }else if(S.reed.floated&&b.g.visible){b.g.position.y=levelCur+0.04+Math.sin(t*1.1)*0.015;b.g.rotation.y+=dt*0.04;b.g.rotation.z=Math.sin(t*0.9)*0.04;}
+}
+
+/* ================================================================
    Furniture, earned by playing (cosmetic variants later); sleeping in the bed
    ================================================================ */
 function grantFurniture(id,quiet){if(S.earned[id])return;S.earned[id]=true;S.stored[id]=(S.stored[id]||0)+1;collectFurn(id);if(!quiet)toast(`Earned for the cottage: ${DECOR_BY_ID[id].name}. Press B inside to place it.`);if(decor.on)renderDecorUI();writeSave();}
@@ -3771,6 +4032,7 @@ function bakeWorld(){
   bakeStatic(home.g,o=>[home.ruin,home.roofG,home.walls,home.hearth,home.hearthRuin].includes(o));
   for(const gr of [home.ruin,home.roofG,home.walls,home.hearthRuin])bakeStatic(gr);bakeStatic(home.hearth,o=>o===home.fire);
   for(const b of boardwalk){bakeStatic(b.fixed);bakeStatic(b.broken);}
+  bakeStatic(weaveSite.g,o=>Object.values(weaveSite.items).includes(o));for(const it of Object.values(weaveSite.items))bakeStatic(it);
   for(const g of STATIC_GROUPS)bakeStatic(g);
 }
 bakeWorld();
@@ -3823,12 +4085,18 @@ GATHER.forEach(G3=>INTERACTS.push({x:G3.x,z:G3.z,r:2.0,state(){if(!gatherAvail(G
   done(){S.gather[G3.id]=S.gameDay;S.inv[G3.type]+=2;toast(G3.type==='wood'?'+2 wood':'+2 stone');SFX.rustle();SFX.get();layoutGather();dailyEvent('gather');writeSave();},pos:()=>_ip.set(G3.x,groundH(G3.x,G3.z)+0.8,G3.z)}));
 RCLUMPS.forEach(c=>INTERACTS.push({x:c.x,z:c.z,r:2.4,state(){if(rbStage()<0||!reedAvail(c.i))return null;return {ok:true,text:'Cut an armful of reeds',hold:1.0};},
   done(){S.reed.cut[c.i]=S.gameDay;S.inv.reed+=2;toast('+2 reeds');SFX.rustle();SFX.get();layoutRbReeds();writeSave();},pos:()=>_ip.set(c.x,groundH(c.x,c.z)+1.6,c.z)}));
+INTERACTS.push({x:WEAVE.x,z:WEAVE.z,r:2.8,state(){if(rbStage()<1)return null;const w=nextWeave();if(!w)return null;
+    if(Object.entries(w.cost).some(([k,v])=>S.inv[k]<v))return {ok:false,text:`Weaving frame · ${w.name} needs ${reedCost(w.cost)} (you have ${S.inv.reed} reeds${w.cost.wood?`, ${S.inv.wood} wood`:''})`};
+    return {ok:true,text:`Weave ${w.name}`,hold:2.0};},
+  done(){weaveNext();},pos:()=>_ip.set(WEAVE.x,groundH(WEAVE.x,WEAVE.z)+1.7,WEAVE.z)});
+INTERACTS.push({x:WEAVE.lx,z:WEAVE.lz,r:2.4,state(){if(!S.reed.woven.boat||S.reed.floated||boatRun)return null;return {ok:true,text:'Set the reed boat on the stream',hold:1.2};},
+  done(){launchBoat();},pos:()=>_ip.set(WEAVE.lx,groundH(WEAVE.lx,WEAVE.lz)+1.0,WEAVE.lz)});
 boardwalk.forEach(b=>INTERACTS.push({x:b.ix,z:b.iz,r:2.6,state(){if(rbStage()<0||S.reed.bw[b.i])return null;if(S.inv.wood<1||S.inv.reed<2)return {ok:false,text:`Broken boardwalk · needs 1 wood and 2 reeds (you have ${S.inv.wood}, ${S.inv.reed})`};return {ok:true,text:'Mend this stretch of boardwalk',hold:1.8};},
   done(){mendBoardwalk(b);},pos:()=>_ip.set(b.x,groundH(b.x,b.z)+1.0,b.z)}));
 {const it={x:0,z:0,r:2.6,upd(){if(mira.state==='home'){it.x=mira.root.position.x;it.z=mira.root.position.z;}else it.x=1e6;},state(){if(mira.state!=='home'||talk.on)return null;return {ok:true,text:miraVisitReady()?'Talk with Mira':'Watch the heron with Mira',hold:0.35};},done(){miraTalk();},pos:()=>_ip.set(mira.root.position.x,mira.root.position.y+1.7,mira.root.position.z)};INTERACTS.push(it);}
 /* fishing at the ripples (cast range), sketching sightings, picking up gifts */
 for(let i=0;i<3;i++){const it={x:0,z:0,r:11,pen:4,upd(){const s=FSPOTS[i];if(s){it.x=s.x;it.z=s.z;}else{it.x=1e6;}},
-  state(){const s=FSPOTS[i];if(!s||FISH.state!=='idle'||depthAt(player.pos.x,player.pos.z)>0.75)return null;if(s.kind==='pond'&&waterU.uIceN.value>0.6)return {ok:false,text:'The pond is frozen over tonight · try the stream'};return {ok:true,text:'Cast your line at the ripples',hold:0.35};},
+  state(){const s=FSPOTS[i];if(!s||FISH.state!=='idle'||depthAt(player.pos.x,player.pos.z)>0.75)return null;if(s.kind==='pond'&&waterU.uIceN.value>0.6)return {ok:true,text:'Fish through a hole in the ice',hold:0.35};return {ok:true,text:'Cast your line at the ripples',hold:0.35};},
   done(){if(FSPOTS[i])fishStart(FSPOTS[i]);},pos:()=>{const s=FSPOTS[i];return s?_ip.set(s.x,spotY(s)+0.8,s.z):_ip.set(0,0,0);}};INTERACTS.push(it);}
 for(let i=0;i<5;i++){const it={x:0,z:0,r:2.8,upd(){const s=SIGHT.list[i];if(s){it.x=s.g.position.x;it.z=s.g.position.z;}else it.x=1e6;},
   state(){const s=SIGHT.list[i];if(!s)return null;const known=!!S.col[s.sp.id];const word={insect:'little creature',bird:'bird',flower:'flower'}[s.sp.type];return {ok:true,text:known?`Sketch the ${s.sp.name.toLowerCase()}`:`Sketch this ${word}`,hold:1.2};},
@@ -4158,6 +4426,7 @@ function updateDay(dt){
   hemi.intensity=(lerp(1.05+0.2*skyHeal,lerp(0.8,0.34,deepF),nightF)*(1-goldF*0.2)+W.cloud*0.15*(1-nightF))*(1+G.uSnow.value*0.4*nightF);
   hemi.color.copy(hor).lerp(zen,0.4).lerp(NIGHT_AMB,nightF);
   hemi.groundColor.setRGB(0.22,0.32,0.2).lerp(_a.setRGB(0.18,0.24,0.28),1-skyHeal).lerp(_b.setRGB(0.08,0.1,0.15),nightF);
+  { const duskF=nightF*(1-deepF)+goldF*0.35;hemi.groundColor.lerp(_b.setRGB(0.42,0.3,0.17),clamp(duskF,0,1)*0.6);hemi.intensity+=0.32*clamp(nightF*(1-deepF),0,1); }
   G.uShadowTint.value.copy(SH_FLOOD).lerp(SH_DAY,skyHeal).lerp(SH_GOLD,goldF).lerp(SH_NIGHT,nightF).lerp(_c.setRGB(0.76,0.86,1.2),wetSky*0.5);
   G.uLitTint.value.copy(LIT_FLOOD).lerp(LIT_DAY,skyHeal).lerp(LIT_GOLD,goldF*(1-wetSky*0.55)).lerp(LIT_NIGHT,nightF).lerp(_c.setRGB(0.99,1.0,1.02),wetSky*0.4);
   G.uSat.value=lerp(0.88,1.08,skyHeal)+goldF*0.16-nightF*0.2;
@@ -4173,12 +4442,13 @@ function updateDay(dt){
   waterU.uZen.value.copy(zen);waterU.uHor.value.copy(hor).lerp(mid,0.3);waterU.uNight.value=nightF;waterU.uCloudLit.value.copy(skyU.uCloudLit.value);
   waterU.uRain.value=rainK;
   const litK=lerp(1,lerp(0.32,0.09,deepF),nightF);waterU.uLit.value=litK;waterU.uMoonDir.value.copy(moonDir);for(const st of streams)st.u.uLit.value=litK;
-  waterU.uIce.value=damp(waterU.uIce.value,SEASON==='winter'?1:0,0.8,dt);waterU.uIceN.value=damp(waterU.uIceN.value,SEASON==='winter'&&(nightF>0.6||W.type==='snow')?1:0,0.15,dt);
+  waterU.uIce.value=damp(waterU.uIce.value,SEASON==='winter'?1:0,0.8,dt);waterU.uIceN.value=simTime<4?(SEASON==='winter'?1:0):damp(waterU.uIceN.value,SEASON==='winter'?1:0,0.15,dt);if(simTime<4)waterU.uIce.value=SEASON==='winter'?1:0;
   G.uNightRim.value=nightF*0.55;G.uPlayerP.value.set(player.pos.x,player.pos.y+1.0,player.pos.z);
   for(const s of streams){s.u.uSky.value.copy(hor).lerp(zen,0.3);}
   const lampK=smooth(0.12,0.6,nightF+(1-skyHeal)*0.2+W.cloud*0.12);
   for(const m of lanternMats)m.emissiveIntensity=lampK*2.8;
   poolMat.opacity=lampK*(0.28+0.5*G.uSnow.value)*(1-deepF*0.1);
+  for(const gs of glowSprites)gs.material.opacity=lampK*0.75;
   G.uSnow.value=damp(G.uSnow.value,SEASON==='winter'?lerp(0.84,1,W.snow):0,1.5,dt);
   G.uGrassH.value=damp(G.uGrassH.value,SEASON==='winter'?0.42:1,1.5,dt);
   G.uDry.value=damp(G.uDry.value,P.dry||0,1.5,dt);
@@ -4204,17 +4474,19 @@ function blocked(x,z){
   for(const c of COLLIDERS){if(c.on&&!c.on())continue;if(Math.hypot(x-c.x,z-c.z)<c.r+0.32)return true;}
   return false;
 }
+function onIce(x,z){return waterU.uIceN.value>0.6&&!onBridge(x,z)&&levelCur-groundH(x,z)>0.02;}
 function depthAt(x,z){if(onBridge(x,z))return 0;return levelCur-groundH(x,z);}
 function canStep(fx,fz,tx,tz){
   if(blocked(tx,tz))return false;
   if(oStage()<4&&rbDist(tx,tz)<27&&rbDist(fx,fz)>=27){if(simTime-gateHintT>8){gateHintT=simTime;toast('A fence and thick mist close the path upstream. Perhaps once the cider press turns again.');}return false;}
   if(stage()<3&&orchDist(tx,tz)<24&&orchDist(fx,fz)>=24){if(simTime-gateHintT>8){gateHintT=simTime;toast('Brambles choke the way up to the old orchard. Restore Mill Pond first.');}return false;}
   const d1=depthAt(tx,tz),d0=depthAt(fx,fz);
-  if(d1>1.0&&d1>d0-0.005)return false;
-  const h0=walkH(fx,fz),h1=walkH(tx,tz),run=Math.hypot(tx-fx,tz-fz)+1e-5;
+  if(d1>1.0&&d1>d0-0.005&&!onIce(tx,tz))return false;
+  const iH=(x,z)=>onIce(x,z)?Math.max(walkH(x,z),levelCur+0.03):walkH(x,z);const h0=iH(fx,fz),h1=iH(tx,tz),run=Math.hypot(tx-fx,tz-fz)+1e-5;
   if((h1-h0)/run>1.05&&player.grounded&&!(h1-h0<0.34&&homeFloor(tx,tz)>-1e8))return false;
   return true;
 }
+function hs0(p){return Math.hypot(p.vel.x,p.vel.z);}
 function playerStep(dt){
   const p=player;
   let ix=0,iz=0;
@@ -4225,19 +4497,21 @@ function playerStep(dt){
   }
   const fwdX=-Math.sin(cam.yaw),fwdZ=-Math.cos(cam.yaw),rtX=Math.cos(cam.yaw),rtZ=-Math.sin(cam.yaw);
   let mx=fwdX*iz+rtX*ix,mz=fwdZ*iz+rtZ*ix;const ml=Math.hypot(mx,mz);if(ml>0){mx/=ml;mz/=ml;}
-  const depth=Math.max(0,depthAt(p.pos.x,p.pos.z));
+  const ice=onIce(p.pos.x,p.pos.z);p.ice=ice;
+  const depth=ice?0:Math.max(0,depthAt(p.pos.x,p.pos.z));
   const wade=lerp(1,0.5,clamp(depth/0.9,0,1));
   const run=keyDown('ShiftLeft')||keyDown('ShiftRight');
   const busy=p.busy>0;p.busy=Math.max(0,p.busy-dt);
-  const speed=(run?6.2:3.4)*wade*(busy?0:1);
-  const accel=p.grounded?14:3;
+  const speed=(run?6.2:3.4)*wade*(busy?0:1)*(ice?1.25:1);
+  const accel=p.grounded?(ice?(ml>0?1.7:0.45):14):3;
   p.vel.x=damp(p.vel.x,mx*speed,accel,dt);p.vel.z=damp(p.vel.z,mz*speed,accel,dt);
   const nx=p.pos.x+p.vel.x*dt,nz=p.pos.z+p.vel.z*dt;
   if(canStep(p.pos.x,p.pos.z,nx,nz)){p.pos.x=nx;p.pos.z=nz;}
   else if(canStep(p.pos.x,p.pos.z,nx,p.pos.z)){p.pos.x=nx;p.vel.z*=0.5;}
   else if(canStep(p.pos.x,p.pos.z,p.pos.x,nz)){p.pos.z=nz;p.vel.x*=0.5;}
   else{p.vel.x*=0.2;p.vel.z*=0.2;}
-  const gh=walkH(p.pos.x,p.pos.z);
+  const gh=onIce(p.pos.x,p.pos.z)?Math.max(walkH(p.pos.x,p.pos.z),levelCur+0.03):walkH(p.pos.x,p.pos.z);
+  if(ice&&hs0(p)>2.2&&dt>0&&rnd()<dt*14)fxSoft.emit(p.pos.x+rr(-.2,.2),levelCur+0.08,p.pos.z+rr(-.2,.2),-p.vel.x*0.1+rr(-.3,.3),rr(0.3,0.8),-p.vel.z*0.1+rr(-.3,.3),_a.setRGB(0.95,0.97,1.0),0.09,0.45,4,0.5);
   if(control&&jumpQ>simTime&&p.grounded&&!busy){p.vy=6.0;p.grounded=false;p.squash=-0.12;jumpQ=-1;SFX.jump();}
   p.vy-=18*dt;p.pos.y+=p.vy*dt;
   if(p.pos.y<=gh){if(!p.grounded&&p.vy<-3){p.squash=0.16;SFX.land();if(depth>0.05){SFX.splash();addRipple(p.pos.x,p.pos.z,1.4);}}p.pos.y=gh;p.vy=0;p.grounded=true;}
@@ -4271,6 +4545,7 @@ function playerPose(){
   if(!p.grounded){lL.rotation.x=-0.5;lR.rotation.x=0.3;aL.rotation.x=-1.2;aR.rotation.x=-1.0;aL.rotation.z=-0.5;aR.rotation.z=0.5;}
   else if(FISH.state!=='idle'){aR.rotation.x=-0.95+(FISH.state==='reel'?Math.sin(t*16)*0.12:Math.sin(t*1.6)*0.04);aR.rotation.z=-0.1;aL.rotation.x=-0.5;aL.rotation.z=0.2;lL.rotation.x=0;lR.rotation.x=0;}
   else if(busy){const w=Math.sin(t*12);aL.rotation.x=-1.25+w*0.3;aR.rotation.x=-1.25-w*0.3;aL.rotation.z=0.15;aR.rotation.z=-0.15;lL.rotation.x=0.35;lR.rotation.x=-0.1;}
+  else if(p.ice&&k>0.25){const g2=Math.sin(p.phase*0.35);lL.rotation.x=g2*0.45;lR.rotation.x=-g2*0.45;aL.rotation.x=-0.3;aR.rotation.x=-0.3;aL.rotation.z=-1.15+g2*0.15;aR.rotation.z=1.15+g2*0.15;p.body.rotation.z=g2*0.12;}
   else{lL.rotation.x=walk*0.75*k;lR.rotation.x=-walk*0.75*k;aL.rotation.x=-walk*0.7*k;aR.rotation.x=walk*0.7*k;aL.rotation.z=-0.08-0.05*Math.sin(t*2.2)*(1-k);aR.rotation.z=0.08+0.05*Math.sin(t*2.2)*(1-k);
     if(p.wave>0&&k<0.2){aR.rotation.x=-0.2;aR.rotation.z=2.5+Math.sin(t*14)*0.35;}
     else if(p.happy>0&&k<0.2){aL.rotation.z=-2.4;aR.rotation.z=2.4;}}
@@ -4304,6 +4579,10 @@ function updateCamera(dt){
       const bb=2*(fx*dx+fz*dz),disc=bb*bb-4*aa*cc;if(disc<0)continue;const t1=(-bb-Math.sqrt(disc))/(2*aa);if(t1>0&&t1<best)best=t1;}
     best=Math.max(best,1.4/cam.dist);cam.pull=damp(cam.pull??1,best,best<(cam.pull??1)?18:2.5,dt);
     want.x=tx+dx*cam.pull;want.z=tz+dz*cam.pull;want.y=cam.target.y+(want.y-cam.target.y)*(0.55+0.45*cam.pull); }
+  { const tx=cam.target.x,ty=cam.target.y,tz=cam.target.z;let tb=1;
+    for(let i=2;i<=10;i++){const k=i/10;if(groundH(tx+(want.x-tx)*k,tz+(want.z-tz)*k)+0.55>ty+(want.y-ty)*k){tb=Math.max(0.3,(i-1.5)/10);break;}}
+    cam.tpull=damp(cam.tpull??1,tb,tb<(cam.tpull??1)?12:1.8,dt);
+    if(cam.tpull<0.999){const k=cam.tpull;want.x=tx+(want.x-tx)*k;want.z=tz+(want.z-tz)*k;want.y=ty+(want.y-ty)*k+(1-k)*1.1;} }
   const floor=Math.max(groundH(want.x,want.z)+0.5,levelCur+0.35);if(want.y<floor)want.y=floor;
   camLookTmp.copy(cam.target).add(_v.set(0,0.35,0));
   if(cine){
@@ -4576,6 +4855,7 @@ function debugComplete(n){
   else if(n===8){if(stage()<3)setStageInstant(3);TP.home();const st=HOME_STEPS[hStage()+1];if(st){for(const [k,v] of Object.entries(st.cost))S.inv[k]=Math.max(S.inv[k],v);buildHomeStep();}}
   else{setStageInstant(8);TP.reedbed();S.inv.wood=Math.max(S.inv.wood,1);S.inv.reed=Math.max(S.inv.reed,2);for(const b of boardwalk.slice(0,4))setBoardwalk(b.i,true);mendBoardwalk(boardwalk[4]);}
 }
+if(DEBUG)window.__mz={get boatRun(){return boatRun;},WEAVE,weaveNext,launchBoat,reedBoat,spawnSight,SPECIES_BY_ID,setJournal:typeof setJournal==="function"?setJournal:null,scene,FALLS,TP,S,cam,player,teleport,setHomeStage,groundH,polyPoint,INLET,FALL,RB,get mode(){return mode;}};
 function toggleDebug(force){
   const el=$('debug');const on=force!==undefined?force:el.hidden;el.hidden=!on;$('fps').hidden=!on;
   if(on)renderQualityUI();
@@ -4628,6 +4908,7 @@ function startGame(){
   cam.target.copy(player.pos);cam.target.y+=1.25;
   canvas.focus({preventScroll:true});
   setTimeout(()=>{$('hint').classList.add('gone');},30000);
+  if(!sandbox&&(S.news|0)<7){const back=S.visitDays>1||stage()>0;S.news=7;if(back)setTimeout(()=>toast('New in the valley (v7): weaving and a reed boat at the Reedbeds, a frozen pond to slide on, and more. See your journal (J).'),6500);}
   if(welcomeMsg)setTimeout(()=>toast(welcomeMsg),1800);
   else if(S.visitDays<=1&&S.gifts.length&&!sandbox)setTimeout(()=>toast('The flood left a few things on the shore. Look for the glints.'),2200);
   writeSave();
