@@ -1,10 +1,17 @@
-<title>Rebuild the Valley</title>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mizumend: Rebuild the Valley</title>
 <meta name="description" content="Restore a flooded pond, an old orchard and a cottage of your own; garden, press seasonal cider, find the Reedbeds, and photograph a valley that follows the real seasons.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23f2e6c9'/%3E%3Cpath d='M14 46 C14 26 30 12 52 12 C52 34 38 50 18 50 Z' fill='%2358803a'/%3E%3Cpath d='M16 48 C26 38 34 30 46 18' stroke='%23f2e6c9' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+DW+Pica:ital@0;1&family=Kalam:wght@300;400;700&display=swap">
 <style>
+/* Anything marked hidden stays hidden, whatever display its own rule sets (the journal, photo dialogs, prompts) */
+[hidden]{display:none!important}
 /* Layout: a full-bleed painted valley; the UI floats on top like pinned pages from a field journal. */
 :root{
   --paper:#f2e6c9;
@@ -292,12 +299,13 @@ body.photo #hud{display:none}
 }
 </style>
 
+</head>
+<body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
   <defs>
     <filter id="rough"><feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="7"/><feDisplacementMap in="SourceGraphic" scale="3"/></filter>
   </defs>
 </svg>
-
 <div id="app">
   <canvas id="c" tabindex="0" aria-label="Mill Pond, a flooded valley you can restore"></canvas>
   <div id="letterbox"><div class="bar top"></div><div class="bar bottom"></div></div>
@@ -470,7 +478,7 @@ body.photo #hud{display:none}
         </div>
         <div class="page">
           <h2>Support the valley</h2>
-          <p class="qnote" style="font-size:15px">Rebuild the Valley is made by a tiny team with no ads and nothing random to buy. If you enjoy Mill Pond, the full valley and a Founder's Pack will help it grow.</p>
+          <p class="qnote" style="font-size:15px">Mizumend is made by a tiny team with no ads and nothing random to buy. If you enjoy Mill Pond, the full valley and a Founder's Pack will help it grow.</p>
           <div class="row"><button class="pbtn" id="btnSupport" type="button">Support the valley</button></div>
           <p class="qnote" id="supportNote"></p>
           <h2 class="sp">Founder code</h2>
@@ -486,9 +494,9 @@ body.photo #hud{display:none}
 
   <div id="title">
     <div class="title-inner">
-      <p class="title-kicker">A cozy restoration · vertical slice</p>
-      <h1>Rebuild the Valley</h1>
-      <p class="title-sub">Chapter one: Mill Pond &amp; the Old Orchard</p>
+      <p class="title-kicker">A cozy restoration</p>
+      <h1>Mizumend</h1>
+      <p class="title-sub">Rebuild the Valley</p>
       <div class="title-actions">
         <button id="btnStart" class="paper paper-btn" type="button" disabled>Gathering the valley…</button>
         <button id="btnNew" class="ghost-btn" type="button" hidden>Start over</button>
@@ -3159,7 +3167,7 @@ function makePostcard(){
   g.save();g.translate(W0-230,ph+110);g.fillStyle='#fbf7ee';g.fillRect(0,0,150,180);g.strokeStyle='#b5442b';g.setLineDash([6,5]);g.lineWidth=3;g.strokeRect(6,6,138,168);g.setLineDash([]);
   g.fillStyle='#58803a';g.beginPath();g.ellipse(75,90,34,58,0.5,0,6.283);g.fill();g.strokeStyle='#f2e6c9';g.lineWidth=3;g.beginPath();g.moveTo(52,130);g.lineTo(100,50);g.stroke();g.restore();
   drawStamp(g,W0,H0);
-  g.fillStyle='#5c4834';g.font='26px "IM Fell DW Pica", Georgia, serif';g.fillText('Rebuild the Valley · Mill Pond',90,H0-60);
+  g.fillStyle='#5c4834';g.font='26px "IM Fell DW Pica", Georgia, serif';g.fillText('Mizumend · Rebuild the Valley',90,H0-60);
   photo.kind='postcard';showShot(cv);
 }
 function showShot(cv){photo.canvas=cv;$('shotImg').src=cv.toDataURL('image/png');$('photoShot').hidden=false;
@@ -3214,7 +3222,7 @@ $('btnCopyCode').addEventListener('click',async()=>{const ta=$('saveCode');ta.va
 $('btnSaveCode').addEventListener('click',async()=>{
   const code=makeSaveCode();$('saveCode').value=code;
   if(!DL){$('saveNote').textContent='Saving files is not available here. Copy the code instead.';return;}
-  try{await DL.save({filename:`rebuild-the-valley-save-${dayKey()}.txt`,data:code+'\n'});$('saveNote').textContent='Saved as a text file.';}
+  try{await DL.save({filename:`mizumend-save-${dayKey()}.txt`,data:code+'\n'});$('saveNote').textContent='Saved as a text file.';}
   catch(e){$('saveNote').textContent=e&&e.code==='declined'?'Not saved.':'Saving files is not available here. Copy the code instead.';}});
 let loadArm=null;
 $('btnLoadCode').addEventListener('click',()=>{
@@ -4645,7 +4653,7 @@ function boot(hotData){
   for(let i=0;i<3;i++)fishSpotsStep(0);
   if(DEBUG)toggleDebug(true);
   updateHUD();
-  const b=$('btnStart');b.disabled=false;b.textContent=STATE_PARAM!==null?`Begin at stage ${STATE_PARAM}`:saved?'Continue':'Begin';
+  const b=$('btnStart');b.disabled=false;b.textContent=STATE_PARAM!==null?`Begin at stage ${STATE_PARAM}`:saved?'Continue':'New Game';
   if(saved){
     const nb=$('btnNew');nb.hidden=false;let arm=false;
     nb.addEventListener('click',()=>{if(!arm){arm=true;nb.textContent='Tap again to erase this valley';nb.classList.add('warn');setTimeout(()=>{arm=false;nb.textContent='Start over';nb.classList.remove('warn');},4000);return;}clearSave();location.reload();});
@@ -4703,3 +4711,5 @@ function frame(now){
 }
 requestAnimationFrame(frame);
 </script>
+</body>
+</html>
