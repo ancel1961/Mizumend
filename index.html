@@ -4143,10 +4143,49 @@ function reedBoatStep(t,dt){
 /* ================================================================
    v9: pieces of the valley's past (journal "Pieces"), theories, and Lamplight Shore
    ================================================================ */
-const RIM_DATA={"talk":["JggFAA0ACQAQQVxWGwwEDxJBXhYGHVQAD1sZCB9BEw5aHUZJOg5NVhIQSwkWEg0ADQcAQUBXE0kJFANBQBZGSToOWxkfB0sVHwhfBxFEGw9KGQ8MChMETw==","PwkWFQ0RCRofBFsZDwYeQRQAXwERR1QsTkBWIFRBWU8DUyEdUxIPShlJHA4FDwM=","PwkSE0hdSDwaBUpLVh0DBFcTRB5ESQMJSksTSQUOFQ5JCkgFGw5ESlhJJhhXFVgBBkkdDw9NHgxLFhIAWxZGSTUPSxkZBw5BFQ1YFkgaABNOVxJH","IkEADlsWSAhUA0NME0kYFQUAQxdIABpBSVYESQYYVxJIEAcHEE8PaxMHSwkWBQ0UGgwRDwE=","IkEbBEsHSB0cBA9VFwQbQRgPDQAHSQ0OWhkVBh4NE0FLGgYNVBVHXFYeChhZQXQcHUkADkBSVhAEFAVBWRoFDFo=","IkEaAEkWSAAAQUNWBhoCBRIFDRwGSQQUXUkZGg5PVzJCUwEdVBZATBoNSwcbDkwHRg=="],"card":["JwAaEUEaDwEAQXxRGRsO","PwkSQUESBRk=","PwkeE1kKRQYaBA9AEwgZElcSRRZIBREHWxkfHUsDAhNDGgYOWkF7VhgADAkDQV4bDUkYBFtKVgAfQRAODRwdHVo="],"page":["PwkSQUESGx1UEU5eEw==","PwkSQUMaDwEAQVtRE0kZCAEEX1MLCBkEAxkCAQ5BGghBHw0bVA5fXBgMD0EDCUhTDwgABA9bD0kDABkFDQcHSQcRTksTSR8JEkFbGgQFFQZKGRQMBw4ATQ0SBg1UFUdcVh4KFRITDQQNBwBBW1EEBh4GH0FFFhpJGxZBGR4GHhISQUQdGx0RAEsXVjoDBFcRWAdIARETD0AZHAUGEhJZUwEHVAAPSxMMD0EUE0wXBAxUEkdcVgEKBVcWQgUNB1QNQEkFAA8EE00NAAdJHRUPThkcBwVXB0EcCR1aQXtRE0kIFAUTSB0cSQAOQFJWAB9BAwlfHB0OHEFbURNJBBESDw0UCR0RQU5XEkkKFhYYDRcHHhoSW0sTCAZPVzVFFkgfHQ1DWBEMSxIWCElTHAERQU1YFBBLFhYSDR8HGgBPD2oeDEsPEhdIAUgaFQhLGQUGRUEkCUhTGwwaFQ9YVgsEAANBSRwfB1QEWVwEEEsYEgBfX0gIGgUPTgQGHwRbQUwdDEkYBElNVh0DBFcNTB4YSRsPAQ==","PwkSQU4BCQ0YBA9OFxpLBxgUQxdIDxUTD10ZHgUSAxNIEgVFVAhBGT0IHAAECUQHCUVUAEFdVh0DBFcDTBERSRMTSk5WHBtBAwlIAQ1JAwhbUVYHBEEZAEAWSAsBFQ9NHgxLDhkEDQcADA1BWFwEDEsGHhdIHUZJIAlKGRUGHxUWBkhTIUkZBEFdEw1LFhYSDQcADFQJQEwFDEsoVxZMAEgLGxNBGR8HRUEjCUhTGwEbE1sZFQYHFBoPDRwGSQAJShkSBgQTERNMHg1JHRIPVB8HDk9XNUUWGgxUCFwZBAYEDFcATxweDFQIWxc="],"oda":"IkEEBEMHSB0cBA9XGR0CAhJPDTwGBQ1BQFcTRUsVGEFCHQ1JFQVLSxMaGEEeDw04CR4VEkdQAghFQS4ETAEbSRUGQBk/SQMEFhNJUwcPVAAPXxkcBQUbCEMUSB0VCkpXVgAFQQMJSAENSQAJShkFHAYMEhMNHA5JAAlKGRAFBA4TTQ0SBg1UKA9OFxpLDxIXSAFIGgETShVWCAUFVygNBAkaVBVAVlYEHgIfQUIVSAhUAkBOFxsPQQMODRIbAlpBZhkBCBgPUBUNAB0bEU8PcFEESxICE0hTBgYDTw/b9v1LKllBYhcJ","rim":"Pg8TBF9THAERQVhWBAdLEx4MF1MJSQcMTlUaSR8UBQ9IF0gCGg5bFVYIBQVXDkMWSAsYFEoZBR0ZABkFA1MxBgETD1QZHQMEBUZeUxwcBg8PUBhJHwkSQVoWCR8RTw==","theory":"JQ4ZBA0cDkkZGA9eAwwYEhISDQQNGxFBXVARAR9PVyhZUx8IBw8ITVYISwYFAEMXBQYACUpLVggfQQMJSFMPCAAEARk/HUsWFhINHhFJGQ5bURMbRUE2D0lTHAERQVxUFwUHQRgPSFMfCAdBQlxY","ren":["KkEbBFkHDRtUFUAZJAwFTVcSWRIaHREFD18ZHBlBAwhAFhs=","PwkSQVkSBAVUAkBVAwQFQRgPDQcADFQFQFYEDxkAGgQNGhtJJgRBHgVTSxgYFF9TChsbFUdcBEVLLB4TTFQbSRIAW1ETG0dBAAlCUx8bHRVKSlYPGQ4aQVkbDUkXCFtAVgwdBAUYDQQBBwAEXRdWJgVBJABOGwFOB0FbWBQFDkEeEg0SSAURFVtcBEkfDlcJRB5IGhwED1EXGksSAwBfBw0NVAdATARJHwgaBF5dSEs8BAhVGkkcABkVDQcHSRcOQlxWAQQMEk0PUxsBEUFcWA8aRUFVKUhUBAVUFk5XAkkfDlcSSBZIEBsUARs="],"mira":["LBMWD0keBx0cBF0ZGggeBh8ESVMJHVQDXVwXAg0ABBUDUzweHQJKF1YgSwIYFEMHDQ1a","OA5XGEIGTxsRQUJAVggeDwNPDTwaSRkYD0wYCgcEWUFqAQkHEAxATR4MGUEEAFQASCBUAk5XVgMeEgNBWAANSQ0OWktWBwoMEk8=","PwkSQUUWGgYaQUtQEgdMFVcEWxYGSRgOQFJWHBtPVygNBwAAGgoPURNJAA8SFg0SBBsRAEtAWA=="],"oda2":["OAkSQUEWHEkACUoZGggGEVcGQlMHHABBQ1gFHUsPHgZFB0ZJMghdSgJJHwgaBA0aBkkACUZLAhBGDhkEDQoNCAYSARk/SRgAA0FCHUgdHAQPThcFB0EWQVobAQURTw==","Mg4CEw0eBx0cBF0ZGwgABARBWRYaGx0DQ1xWHQ4AWUFpHAZOAEFbXBoFSwkSEw06SBoVCEsZBQZF"],"sachi":["OAgDTw0nAAxUCkpNAgUORgRBQh1G","OQQZQVoaBAVUFk5XAkkfDlcKQxwfR1QoCE8TSRgVFhNZFgxJAAlKGRoMHxUSEw0VBxwGQVtQGwwYTw==","Mg4CQVoSBAJUDUZSE0kSDgITDRUJHRwEXRkSAA9PVzVCHEgPFRJbGRkHSxUfBA0AHAgdE1wX","IkETDkNUHEkaBEpdVh0DBFcNTB4YSRoOWBdWIEsSGwRIA0geHRVHGQIBDkEACEMXBx5UDl9cGEkCDwQVSBIMRw=="],"fest":"Pw4ZCEobHEkdEg9NHgxLAxgAWVMODAcVRk8XBUVBOwhZBwQMVA1GTVYLBAADEg0cBkkACUoZAQgfBAVNDRUHG1QEWVwEEAQPEkFaGwdJERdKS1YKCgwSQUUcBQxa"};
-const _rk=new TextEncoder().encode('kawa-shita/9vi');
-function rimText(s){try{const b=atob(s);const u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i)^_rk[i%_rk.length];return new TextDecoder().decode(u);}catch(e){return '';}}
-const rimAll=x=>Array.isArray(x)?x.map(rimAll):(x&&typeof x==='object')?Object.fromEntries(Object.entries(x).map(([k,v])=>[k,rimAll(v)])):rimText(x);
+const STORY_TEXT={
+ "talk": [
+  "Mira said someone sent a boat down. Nobody has sent one but me. Not in thirty-one years.",
+  "That basket you carry. May I? ... It's so worn.",
+  "There. Under the rim, where nobody looks. My turn in the weave. And one blue strand.",
+  "I wove a blue strand in for my second. Ren had green.",
+  "I left the lamp on so you could find the way. You took your time.",
+  "I made it lopsided on purpose. So it would float."
+ ],
+ "card": [
+  "Lamplight Shore",
+  "The lamp",
+  "Thirty-one years she left it burning. Tonight she lets it go out."
+ ],
+ "page": [
+  "The last page",
+  "The night the river came, the miller opened the gate by hand to spare the village below, and the water went through her own house instead. She put her youngest in a reed cradle she had woven lopsided, so it would float. The current took it through the open gate and away downstream. The village said the baby was lost. She never said so. She sent a boat down every year, and wrote, and left the lamp on.",
+  "The cradle was found far downstream, in Kawashita, and the baby grew up there with no name but the one they were given. The cottage I mended was the house I was born in. The short column on the doorframe is mine. There is room above it."
+ ],
+ "oda": "I sent the notice. Only one, to one address in Kawashita. Years ago I heard of a foundling taken in there the summer of the flood, and I was never sure, and I was too much of a coward to ask. I wasn't sure. I'm sure now. — K. Oda",
+ "rim": "Under the worn rim: a small turned knot, and one blue strand. Your mother's turn in the weave.",
+ "theory": "None of my guesses were right. It wasn't a grandmother at the gate. It was my mother. And the small one was me.",
+ "ren": [
+  "A letter to Ren, started four times",
+  "The tall column on the doorframe is Ren's: your brother, Mira's father, who writes from the city every winter. On Sachi's table is a letter to him she has started four times. \"He'll want to come home,\" she says. \"He'll want to see you.\""
+ ],
+ "mira": [
+  "Grandmother laughed at breakfast. Twice. I counted.",
+  "So you're my aunt. Or my uncle. Grandmother says I can just use your name.",
+  "The heron didn't even look up. I think he knew already."
+ ],
+ "oda2": [
+  "She let the lamp go out last night. First time in thirty-one years. I sat on the wall a while.",
+  "Your mother makes terrible tea. Don't tell her I said so."
+ ],
+ "sachi": [
+  "Sit. The kettle's on.",
+  "Ren will want to know. I've started the letter four times.",
+  "You walk like your father did. Too fast on the stairs.",
+  "I don't need the lamp now. I sleep with the window open instead."
+ ],
+ "fest": "Tonight is the boat festival. Little lit boats on the water, for everyone who ever came home."
+};
 const PIECES=[
   {id:'notice',t:'The notice',w:'You arrived with it',x:'THE MILL COTTAGE, free to anyone who will mend it. Typed, unsigned, and posted to you at your rooms in Kawashita. Nobody else in Kawashita seems to have had one.',g:''},
   {id:'lantern',t:'A soot-black lantern',w:'Mill Pond · in the flood debris',x:'The handle is a heron, its neck bent to hold the ring. The glass is cracked, but someone had trimmed the wick short, as if they meant to light it again.',g:'a'},
@@ -4234,7 +4273,7 @@ function lamplightVisuals(t,dt){
   festVisuals(t,dt);
 }
 /* the far shore */
-let rimD=null;const rim=()=>rimD||(rimD=rimAll(RIM_DATA));
+const rim=()=>STORY_TEXT;
 function lampTalk(){
   if(talk.on)return;const s=S.story;
   if(s.done){const L=rim().sachi;talk.lines=[L[(S.gameDay+Math.floor(simTime/40))%L.length]];talk.onEnd=null;}
