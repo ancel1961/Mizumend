@@ -8,7 +8,8 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const $ = (id) => document.getElementById(id);
 /* Systems in other modules (combat, and later co-op) plug in here instead of reaching into this file */
-const HOOKS={sim:[],vis:[],pose:[],project:[],pileBlocked:null,sluiceBlocked:null,boot:[]};
+const HOOKS={sim:[],vis:[],pose:[],project:[],pileBlocked:null,sluiceBlocked:null,brambleBlocked:null,cuttingsBlocked:null,boot:[]};
+let showerT=0;
 let hitStop=0,timeScale=1;
 function showError(msg){ const el=$('err'); el.textContent=msg; el.hidden=false; }
 
@@ -1917,7 +1918,7 @@ function applySave(d){
   if(Array.isArray(d.keepsakes))S.keepsakes=d.keepsakes.filter(k=>typeof k==='string').slice(0,200);
   if(Array.isArray(d.notes))S.notes=d.notes.filter(n=>Number.isInteger(n)&&n>=0&&n<64).slice(0,64);
   if(d.col&&typeof d.col==='object')for(const k in d.col){if(SPECIES_BY_ID[k]&&d.col[k]&&typeof d.col[k]==='object')S.col[k]={d:String(d.col[k].d||'').slice(0,10),n:clamp(d.col[k].n|0,1,9999)};}
-  if(d.cosmetics&&typeof d.cosmetics==='object')S.cosmetics={founderHat:!!d.cosmetics.founderHat};
+  if(d.cosmetics&&typeof d.cosmetics==='object'){const c=d.cosmetics;S.cosmetics={founderHat:!!c.founderHat,bands:{},band:null};if(c.bands&&typeof c.bands==='object')for(const k of ['koi','crow','tin'])if(c.bands[k])S.cosmetics.bands[k]=true;if(S.cosmetics.bands[c.band])S.cosmetics.band=c.band;}
   if(d.wearing==='founder'&&S.cosmetics.founderHat)S.wearing='founder';
   if(d.oda&&typeof d.oda==='object'){const m=num(d.oda.met,0,3),l=num(d.oda.lastDay,-1,1e7);if(m!==null)oda.met=m|0;if(l!==null)oda.lastDay=Math.floor(l);}
   if(Array.isArray(d.decor))S.decor=d.decor.filter(e=>e&&DECOR_BY_ID[e.id]&&Number.isFinite(e.x)&&Number.isFinite(e.z)).slice(0,MAX_DECOR*2).map(e=>({id:e.id,x:clamp(e.x,-130,130),z:clamp(e.z,-130,130),ry:Number.isFinite(e.ry)?e.ry:0}));
@@ -1932,7 +1933,7 @@ function applySave(d){
   if(d.reed&&typeof d.reed==='object'){if(Array.isArray(d.reed.bw)&&d.reed.bw.length===5)S.reed.bw=d.reed.bw.map(Boolean);if(Array.isArray(d.reed.cut))S.reed.cut=d.reed.cut.slice(0,6).map(v=>Number.isFinite(v)?v|0:-1);
     S.reed.woven={};if(d.reed.woven&&typeof d.reed.woven==='object')for(const k of ['basket','mat','boat'])if(d.reed.woven[k])S.reed.woven[k]=true;S.reed.floated=!!d.reed.floated;}
   S.news=Number.isFinite(d.news)?d.news|0:0;
-  S.blight={koi:!!(d.blight&&d.blight.koi)};
+  S.blight={};for(const k of ['koi','koiRe','bramble','sling','swing','tin','crow','shower'])S.blight[k]=!!(d.blight&&d.blight[k]);
   S.story=null;if(d.story&&typeof d.story==='object'){const t=d.story;S.story={f:{},seen:{},gate:!!t.gate,done:!!t.done,gc:!!t.gc,fest:Number.isFinite(t.fest)?t.fest|0:-1,pick:['a','b','c'].includes(t.pick)?t.pick:null};
     if(t.f&&typeof t.f==='object')for(const k of Object.keys(t.f))if(PIECE_BY_ID[k]&&t.f[k])S.story.f[k]=Number(t.f[k])||1;if(t.seen&&typeof t.seen==='object')for(const k of Object.keys(t.seen))S.story.seen[k]=!!t.seen[k];}
   if(d.mira&&typeof d.mira==='object'){const m=num(d.mira.met,0,3),l=num(d.mira.lastDay,-1,1e7);if(m!==null)mira.met=m|0;if(l!==null)mira.lastDay=Math.floor(l);}
@@ -2780,7 +2781,8 @@ function scrapCapture(req){
   const list=scrap.data.areas[A.id]||(scrap.data.areas[A.id]=[]);list.push({p:req.p,img,...scrapStamp()});list.sort((a,b)=>a.p-b.p);while(list.length>5)list.splice(1,1);
   scrapWrite();if(req.p>0&&!sandbox)toast(`${A.name} at ${req.p}%: a new page in your scrapbook (J).`);
 }
-function scrapFrame(){if(!scrap.q.length||cine||mode!=='play'||photo.on||journalOpen)return;const r=scrap.q[0];if(simTime<r.at)return;scrap.q.shift();try{scrapCapture(r);}catch(e){console.error(e);}}
+function scrapFrame(){if(scrap.want){const w=scrap.want;scrap.want=null;try{scrap.data.pins.push({img:scrapThumb(renderer.domElement),cap:w,...scrapStamp()});while(scrap.data.pins.length>SCRAP_PIN_MAX)scrap.data.pins.shift();scrapWrite();}catch(e){}}
+  if(!scrap.q.length||cine||mode!=='play'||photo.on||journalOpen)return;const r=scrap.q[0];if(simTime<r.at)return;scrap.q.shift();try{scrapCapture(r);}catch(e){console.error(e);}}
 function scrapPin(){const cv=photo.canvas;if(!cv)return;const near=SCRAP_AREAS.map(A=>({A,d:A.id==='pond'?Math.hypot(player.pos.x,player.pos.z)-30:A.id==='orchard'?orchDist(player.pos.x,player.pos.z):A.id==='home'?homeDist(player.pos.x,player.pos.z):rbDist(player.pos.x,player.pos.z)})).sort((a,b)=>a.d-b.d)[0].A;
   scrap.data.pins.push({img:scrapThumb(cv),cap:near.name,...scrapStamp()});while(scrap.data.pins.length>SCRAP_PIN_MAX)scrap.data.pins.shift();scrapWrite();
   $('shotNote').textContent=`Pinned to your scrapbook (${scrap.data.pins.length} of ${SCRAP_PIN_MAX}; the oldest goes when it's full).`;SFX.page();}
@@ -2846,13 +2848,18 @@ const SUPPORT_URL='';
 const FOUNDER_SALT='mill-pond-founders-2026',B32='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function founderSig(body){let h=cyrb53(FOUNDER_SALT+body);let s='';for(let i=0;i<4;i++){s+=B32[h%32];h=Math.floor(h/32);}return s;}
 function checkFounder(code){const c=String(code).toUpperCase().replace(/[^A-Z0-9]/g,'');const m=c.match(/^FNDR([A-Z0-9]{4})([A-Z0-9]{4})([A-Z0-9]{4})$/);if(!m)return false;const body=m[1]+m[2];if([...body].some(ch=>!B32.includes(ch)))return false;return founderSig(body)===m[3];}
-function applyWardrobe(){const f=S.wearing==='founder'&&S.cosmetics.founderHat;player.hat.visible=!f;player.fhat.visible=f;}
+const BANDS={koi:{name:'Koi-scale band',col:0xf2ece0,c2:0xe2602a},crow:{name:"Crow's-feather band",col:0x2a3450,c2:0x5a78b0},tin:{name:'Seed-tin band',col:0x7a8a4a,c2:0xd8b03a}};
+const _bandMat=(()=>{let m=null;player.hat.traverse(o=>{if(!m&&o.isMesh&&o.material&&o.material.color&&o.material.color.getHex()===0xb5442b){o.material=o.material.clone();m=o.material;}});return m;})();
+function applyWardrobe(){const f=S.wearing==='founder'&&S.cosmetics.founderHat;player.hat.visible=!f;player.fhat.visible=f;
+  const b=S.cosmetics.bands&&S.cosmetics.band&&S.cosmetics.bands[S.cosmetics.band]?BANDS[S.cosmetics.band]:null;if(_bandMat)_bandMat.color.setHex(b?b.col:0xb5442b);}
 function renderValleyPane(fill){
   if(fill)$('saveCode').value=makeSaveCode();
   const has=!!S.cosmetics.founderHat;
   $('wardrobe').innerHTML=`<button class="pbtn" type="button" data-wear="straw" aria-pressed="${S.wearing!=='founder'}">Straw hat</button><button class="pbtn" type="button" data-wear="founder" aria-pressed="${S.wearing==='founder'&&has}" ${has?'':'disabled'}>Founder's hat${has?'':' · locked'}</button>`;
+  {const own=Object.keys(BANDS).filter(k=>S.cosmetics.bands&&S.cosmetics.bands[k]);if(own.length)$('wardrobe').insertAdjacentHTML('beforeend',`<div class="row" style="margin-top:6px"><button class="pbtn" type="button" data-band="" aria-pressed="${!S.cosmetics.band}">Red band</button>${own.map(k=>`<button class="pbtn" type="button" data-band="${k}" aria-pressed="${S.cosmetics.band===k}">${BANDS[k].name}</button>`).join('')}</div>`);}
 }
-$('wardrobe').addEventListener('click',(e)=>{const b=e.target.closest('[data-wear]');if(!b||b.disabled)return;S.wearing=b.dataset.wear;applyWardrobe();renderValleyPane();writeSave();});
+$('wardrobe').addEventListener('click',(e)=>{const bb=e.target.closest('[data-band]');if(bb){if(!S.cosmetics.bands)S.cosmetics.bands={};S.cosmetics.band=bb.dataset.band||null;applyWardrobe();renderValleyPane();writeSave();return;}
+  const b=e.target.closest('[data-wear]');if(!b||b.disabled)return;S.wearing=b.dataset.wear;applyWardrobe();renderValleyPane();writeSave();});
 $('btnCopyCode').addEventListener('click',async()=>{const ta=$('saveCode');ta.value=makeSaveCode();
   try{await navigator.clipboard.writeText(ta.value);$('saveNote').textContent='Copied. Keep it somewhere safe.';}
   catch(e){ta.focus();ta.select();let ok=false;try{ok=document.execCommand('copy');}catch(e2){}$('saveNote').textContent=ok?'Copied. Keep it somewhere safe.':'Select the code above and copy it.';}});
@@ -2937,7 +2944,7 @@ function odaPose(t,dt){
 const ODA_VISITS=[
   ["Oh. So it's true. The water's back in the channel.","I'm Oda. I kept this press for forty-one autumns, until the river came up and took the lower rows.","I didn't think I'd find the trees again. My knees told me not to come up the lane. I came anyway.","Here. I wrote this before I knew who would read it."],
   ["Morning. I slept in the mill house, if that's all right. It smells the same as it did.","The young trees are doing well. Don't let them fruit too hard the first year. They wear themselves out.","This one is mostly about apples. You can skip the dull parts."],
-  ["I pressed a little this morning. Only a little. The old screw still sticks in the cold.","There. Taste that. That's what this hill tastes like.","Her lamp was the only light that night. She was out on the gate, shouting over the water. I'll not say more than that.","And the barrel. I've no use for two. Put it somewhere it'll be looked at."]
+  ["I pressed a little this morning. Only a little. The old screw still sticks in the cold.","There. Taste that. That's what this hill tastes like.","Her lamp was the only light that night. She was out on the gate, shouting over the water. And something small and pale went under the gate with the current. I told myself it was a lantern. I've told myself that for a long time.","And the barrel. I've no use for two. Put it somewhere it'll be looked at."]
 ];
 const ODA_LETTERS=[
   "To whoever is mending the valley. I left the year the water reached the third step of the mill. I told myself it was for one season. It was eleven. The press screw sticks in the cold; tap it twice on the left and it remembers. — K. Oda",
@@ -3643,7 +3650,7 @@ const PIECES=[
   {id:'marks',t:'Pencil marks on the doorframe',w:'The mill cottage · by the door',x:'Two columns of height marks. One climbs, year after year, to the height of a grown person. The other stops at the very first mark.',g:'b'},
   {id:'hook',t:'The heron on the hearth',w:'The mill cottage · the hearth',x:'The kettle hook is carved as a heron, the same heron as the lantern handle. Whoever lived here had a heron for a sign.',g:'a'},
   {id:'bell',t:"Mr. Oda's postscript",w:'Old Orchard · a letter from Mr. Oda',x:'"P.S. I was meant to be on the hill that night, with the bell. I wasn\'t fast enough. I have never been fast enough since."',g:'c'},
-  {id:'gatelight',t:'What Mr. Oda saw',w:'Old Orchard · by the press',x:'"Her lamp was the only light that night. She was out on the gate, shouting over the water." He would not say who she was.',g:'a'},
+  {id:'gatelight',t:'What Mr. Oda saw',w:'Old Orchard · by the press',x:'"Her lamp was the only light that night. She was out on the gate, shouting over the water. Something small and pale went under the gate with the current. I told myself it was a lantern." He would not say who she was.',g:'ab'},
   {id:'weave',t:'Every family has its own turn',w:'The Reedbeds · Mira',x:'"Every family has its own turn in the weave, Grandmother says. Hers goes under the rim, where nobody looks."',g:''},
   {id:'boats',t:'A boat sent down',w:'The Reedbeds · Mira',x:'"Grandmother always sent one down." Every year, Mira says. She doesn\'t know what for. She has never asked.',g:'b'},
   {id:'window',t:'The lit window',w:'Across the water, at night',x:'On the far shore one window is always lit, every night, in every weather. Mira: "Grandmother leaves the lamp on."',g:'b'},
@@ -3792,13 +3799,13 @@ INTERACTS.push({x:sluice.south.x,z:sluice.south.z,r:5.2,state(){
 CLUMPS.forEach(c=>INTERACTS.push({x:c.x,z:c.z,r:2.6,state(){if(c.harvested)return null;if(stage()<2)return {ok:false,text:'Wild reeds · divide them once the pond settles'};return {ok:true,text:'Divide the wild reeds',hold:1.0};},done(){harvestClump(c);},pos:()=>_ip.set(c.x,groundH(c.x,c.z)+1.6,c.z)}));
 SPOTS.forEach(s=>INTERACTS.push({x:s.x,z:s.z,r:2.3,state(){if(s.planted||stage()<2)return null;if(S.inv.reed<1)return {ok:false,text:'Planting spot · gather reed shoots upstream past the mill'};return {ok:true,text:'Plant reed shoots',hold:1.0};},done(){plantSpot(s);},pos:()=>_ip.set(s.x,groundH(s.x,s.z)+1.0,s.z)}));
 /* the Old Orchard */
-brambles.forEach(b=>INTERACTS.push({x:b.x,z:b.z,r:2.9,state(){if(b.cleared||b.anim>=0)return null;if(oStage()<0)return {ok:false,text:'Bramble thicket · restore Mill Pond first'};return {ok:true,text:'Cut back the brambles',hold:1.6};},done(){clearBramble(b);},pos:()=>_ip.set(b.x,groundH(b.x,b.z)+1.1,b.z)}));
+brambles.forEach(b=>INTERACTS.push({x:b.x,z:b.z,r:2.9,state(){if(b.cleared||b.anim>=0)return null;if(oStage()<0)return {ok:false,text:'Bramble thicket · restore Mill Pond first'};{const bl=HOOKS.brambleBlocked&&HOOKS.brambleBlocked(b);if(bl)return bl;}return {ok:true,text:'Cut back the brambles',hold:1.6};},done(){clearBramble(b);},pos:()=>_ip.set(b.x,groundH(b.x,b.z)+1.1,b.z)}));
 stoneHeaps.forEach(h=>INTERACTS.push({x:h.x,z:h.z,r:2.5,state(){if(h.left<=0)return null;const os=oStage();if(os<0||os>1)return null;if(os<1)return {ok:false,text:'Old stone heap · cut back the brambles first'};return {ok:true,text:`Gather stone · ${h.left} left here`,hold:0.8};},
   done(){h.left--;syncStoneHeap(h);S.inv.stone++;toast('+1 stone');SFX.knock(0,240);SFX.get();puff(h.x,groundH(h.x,h.z)+0.3,h.z,8,_dust,0.3);writeSave();},pos:()=>_ip.set(h.x,groundH(h.x,h.z)+0.9,h.z)}));
 chanSegs.forEach(c=>INTERACTS.push({x:c.ix,z:c.iz,r:2.7,state(){if(c.fixedOK||c.anim>=0)return null;const os=oStage();if(os<0)return null;if(os<1)return {ok:false,text:'A broken stretch of channel · cut back the brambles first'};
   if(S.inv.stone<3)return {ok:false,text:`Broken channel · needs 3 stone (you have ${S.inv.stone})`};return {ok:true,text:'Reline the channel with stone',hold:2.0};},done(){fixChannel(c);},pos:()=>_ip.set(c.x,groundH(c.x,c.z)+0.9,c.z)}));
 INTERACTS.push({x:oldApple.x,z:oldApple.z,r:3.8,state(){const os=oStage();if(os<0)return null;if(os<2)return {ok:false,text:'The old apple tree · it will share cuttings once water returns'};if(os>2)return null;
-  const need=stumps.filter(s=>!s.planted).length-S.inv.cut;if(need<=0)return null;return {ok:true,text:'Take cuttings from the old apple tree',hold:1.2};},done(){takeCuttings();},pos:()=>_ip.set(oldApple.x,groundH(oldApple.x,oldApple.z)+2.4,oldApple.z)});
+  const need=stumps.filter(s=>!s.planted).length-S.inv.cut;if(need<=0)return null;{const bl=HOOKS.cuttingsBlocked&&HOOKS.cuttingsBlocked();if(bl)return bl;}return {ok:true,text:'Take cuttings from the old apple tree',hold:1.2};},done(){takeCuttings();},pos:()=>_ip.set(oldApple.x,groundH(oldApple.x,oldApple.z)+2.4,oldApple.z)});
 INTERACTS.push({x:press.ix,z:press.iz,r:3.0,state(){if(press.fixedOK||press.anim>=0)return null;const os=oStage();if(os<0)return null;if(os<3)return {ok:false,text:'An old cider press · the orchard needs its trees first'};
   if(S.inv.wood<PRESS_WOOD)return {ok:false,text:`Cider press · needs ${PRESS_WOOD} wood (you have ${S.inv.wood})`};return {ok:true,text:'Mend the cider press with bramble wood',hold:2.8};},done(){fixPress();},pos:()=>_ip.set(press.x,groundH(press.x,press.z)+2.2,press.z)});
 stumps.forEach(s=>INTERACTS.push({x:s.x,z:s.z,r:2.3,state(){if(s.planted||oStage()<2)return null;if(S.inv.cut<1)return {ok:false,text:'Old stump · take a cutting from the old apple tree'};return {ok:true,text:'Graft a cutting onto the stump',hold:1.0};},done(){graftStump(s);},pos:()=>_ip.set(s.x,groundH(s.x,s.z)+0.9,s.z)}));
@@ -4145,7 +4152,8 @@ function updateDay(dt){
   goldF=smooth(-0.1,0.05,elev)*(1-smooth(0.12,0.4,elev));
   updateWeather(dt);
   skyHeal=damp(skyHeal,G.uHealNext.value,0.6,dt);
-  rainK=damp(rainK,Math.max(RAIN[stage()],W.rain),0.5,dt);
+  if(showerT>0)showerT-=dt;
+  rainK=damp(rainK,Math.max(RAIN[stage()],W.rain,showerT>0?0.85:0),showerT>0?1.2:0.5,dt);
   mixSky('dayZen','goldZen','twiZen','nightZen',zen);mixSky('dayMid','goldMid','twiMid','nightMid',mid);mixSky('dayHor','goldHor','twiHor','nightHor',hor);
   pal('sunDay',_a);pal('sunGold',_b);sunC.copy(_a).lerp(_b,goldF);
   const grey=W.cloud*W.cloud*0.42;
@@ -4198,7 +4206,7 @@ function updateDay(dt){
   G.uNightRim.value=nightF*0.55;G.uPlayerP.value.set(player.pos.x,player.pos.y+1.0,player.pos.z);
   for(const s of streams){s.u.uSky.value.copy(hor).lerp(zen,0.3);}
   const lampK=smooth(0.12,0.6,nightF+(1-skyHeal)*0.2+W.cloud*0.12);
-  for(const m of lanternMats)m.emissiveIntensity=lampK*2.8;
+  for(const m of lanternMats)m.emissiveIntensity=Math.max(lampK,(1-skyHeal)*0.45)*2.8;
   poolMat.opacity=lampK*(0.3+0.16*nightF+0.45*G.uSnow.value);
   for(const gs of glowSprites)gs.material.opacity=lampK*0.92;
   G.uSnow.value=damp(G.uSnow.value,SEASON==='winter'?lerp(0.84,1,W.snow):0,1.5,dt);
@@ -4214,7 +4222,7 @@ function updateDay(dt){
   const dusk=1-smooth(0.0,0.2,elev);
   fireflies.uFire.value=damp(fireflies.uFire.value,(stage()>=3?1:stage()>=1?0.55:0)*(SEASON!=='winter'?1:0)*dusk*(1-rainK*0.7),0.8,dt);
   if(stage()>=3&&fireflies.uFire.value>0.4&&!S.col.firefly){sighting('fireflies');toast('New in your journal: Firefly');}
-  G.uWind.value=0.75+0.35*Math.sin(G.uTime.value*0.21)*Math.sin(G.uTime.value*0.13+1.0)+0.15+rainK*0.2+W.cloud*0.15;
+  G.uWind.value=0.75+0.35*Math.sin(G.uTime.value*0.21)*Math.sin(G.uTime.value*0.13+1.0)+0.15+rainK*0.2+W.cloud*0.15+(showerT>0?0.7:0);
 }
 
 /* ================================================================
@@ -4327,17 +4335,20 @@ function updateCamera(dt){
   }
   cam.target.x=damp(cam.target.x,player.pos.x,10,dt);cam.target.z=damp(cam.target.z,player.pos.z,10,dt);cam.target.y=damp(cam.target.y,player.pos.y+1.25,6,dt);
   cam.inside=damp(cam.inside??0,homeInside()?1:0,4,dt);
-  const pitchE=lerp(cam.pitch,0.9,cam.inside),distE=lerp(cam.dist,5.4,cam.inside);
+  const fr=cam.frame;cam.frameK=damp(cam.frameK||0,fr?1:0,2.5,dt);
+  if(fr){cam.target.x=lerp(cam.target.x,lerp(player.pos.x,fr.x,0.32),cam.frameK);cam.target.z=lerp(cam.target.z,lerp(player.pos.z,fr.z,0.32),cam.frameK);
+    if(simTime-lastLookT>1.2){const want=Math.atan2(player.pos.x-fr.x,player.pos.z-fr.z);cam.yaw+=angWrap(want-cam.yaw)*(1-Math.exp(-1.6*dt));}}
+  const pitchE=lerp(lerp(cam.pitch,0.9,cam.inside),Math.max(cam.pitch,fr?fr.pitch:0.5),cam.frameK),distE=lerp(lerp(cam.dist,5.4,cam.inside),Math.max(cam.dist,fr?fr.dist:10),cam.frameK);
   const cp=Math.cos(pitchE),sp=Math.sin(pitchE);
   const want=_v3.set(cam.target.x+Math.sin(cam.yaw)*cp*distE,cam.target.y+sp*distE+0.4,cam.target.z+Math.cos(cam.yaw)*cp*distE);
   { const tx=cam.target.x,tz=cam.target.z,dx=want.x-tx,dz=want.z-tz,aa=dx*dx+dz*dz;let best=1;
     if(aa>1e-4)for(const c of COLLIDERS){if(c.r<0.3||(c.on&&!c.on()))continue;const fx=tx-c.x,fz=tz-c.z,rad=c.r+0.4;const cc=fx*fx+fz*fz-rad*rad;if(cc<0)continue;
       const bb=2*(fx*dx+fz*dz),disc=bb*bb-4*aa*cc;if(disc<0)continue;const t1=(-bb-Math.sqrt(disc))/(2*aa);if(t1>0&&t1<best)best=t1;}
-    best=Math.max(best,1.4/cam.dist);cam.pull=damp(cam.pull??1,best,best<(cam.pull??1)?18:2.5,dt);
+    best=Math.max(best,1.4/cam.dist,cam.frameK*0.8);cam.pull=damp(cam.pull??1,best,best<(cam.pull??1)?18:2.5,dt);
     want.x=tx+dx*cam.pull;want.z=tz+dz*cam.pull;want.y=cam.target.y+(want.y-cam.target.y)*(0.55+0.45*cam.pull); }
   { const tx=cam.target.x,ty=cam.target.y,tz=cam.target.z;let tb=1;
     for(let i=2;i<=10;i++){const k=i/10;if(groundH(tx+(want.x-tx)*k,tz+(want.z-tz)*k)+0.55>ty+(want.y-ty)*k){tb=Math.max(0.3,(i-1.5)/10);break;}}
-    cam.tpull=damp(cam.tpull??1,tb,tb<(cam.tpull??1)?12:1.8,dt);
+    tb=Math.max(tb,cam.frameK*0.7);cam.tpull=damp(cam.tpull??1,tb,tb<(cam.tpull??1)?12:1.8,dt);
     if(cam.tpull<0.999){const k=cam.tpull;want.x=tx+(want.x-tx)*k;want.z=tz+(want.z-tz)*k;want.y=ty+(want.y-ty)*k+(1-k)*1.1;} }
   const floor=Math.max(groundH(want.x,want.z)+0.5,levelCur+0.35);if(want.y<floor)want.y=floor;
   camLookTmp.copy(cam.target).add(_v.set(0,0.35,0));
@@ -4602,7 +4613,7 @@ const TP={
   yard:()=>teleport(YARD.x+(YARD.x-mill.x)*0.25,YARD.z+(YARD.z-mill.z)*0.25,YARD.x,YARD.z)
 };
 function debugComplete(n){
-  markSandbox();
+  markSandbox();if(!S.blight)S.blight={};if(n===2)S.blight.koi=true;if(n===6)S.blight.bramble=true;
   const oc=new THREE.Vector3(ORCH.x,0,ORCH.z);
   if(n===1){setStageInstant(0);TP.debris();piles.forEach(p=>{p.cleared=true;p.g.visible=false;});S.inv={wood:12,stone:6,reed:0,cut:0};completeProject(1,new THREE.Vector3(piles[0].x,0,piles[0].z));}
   else if(n===2){setStageInstant(1);TP.sluice();buildSluice();}
@@ -4667,7 +4678,7 @@ function startGame(){
   cam.target.copy(player.pos);cam.target.y+=1.25;
   canvas.focus({preventScroll:true});
   setTimeout(()=>{$('hint').classList.add('gone');},30000);
-  if(!sandbox&&(S.news|0)<9){const back=S.visitDays>1||stage()>0;S.news=9;if(back)setTimeout(()=>toast('Something in the valley is remembering. See the new Pieces tab in your journal (J).'),6500);}
+  if(!sandbox&&(S.news|0)<12){const back=S.visitDays>1||stage()>0;S.news=12;if(back)setTimeout(()=>toast('The valley fights back now, and the Old Orchard has a story of its own. See What\'s new in your journal (J).'),6500);}
   if(welcomeMsg)setTimeout(()=>toast(welcomeMsg),1800);
   else if(S.visitDays<=1&&S.gifts.length&&!sandbox)setTimeout(()=>toast('The flood left a few things on the shore. Look for the glints.'),2200);
   writeSave();
@@ -4762,9 +4773,10 @@ export const MZ={THREE,HOOKS,scene,camera,renderer,canvas,player,cam,S,keys,INTE
   fxSoft,fxGlow,hud,talk,photo,
   $,clamp,lerp,smooth,damp,rr,rnd,ease,angWrap,
   groundH,walkH,depthAt,polyPoint,polyInfo,makeToon,boxM,cylM,addOutline,toast,showCardBrief,startCine,after,sparkle,puff,addRipple,auSwell,
-  writeSave,stage,teleport,completeProject,piece,hasPiece,setBarrierOpen,keyDown,
+  writeSave,stage,teleport,completeProject,piece,hasPiece,setBarrierOpen,keyDown,ORCH,oldApple,brambles,stumps,oStage,press,oda,W,applyWardrobe,renderValleyPane,BANDS,scrap,
+  shower(sec){showerT=Math.max(showerT,sec);},
   get mode(){return mode;},get cine(){return cine;},get simTime(){return simTime;},get journalOpen(){return journalOpen;},get sandbox(){return sandbox;},
-  get nightF(){return nightF;},get levelCur(){return levelCur;},get decorOn(){return decor.on;},
+  get nightF(){return nightF;},get goldF(){return goldF;},get hours(){return S.hours;},get SEASON(){return SEASON;},get levelCur(){return levelCur;},get decorOn(){return decor.on;},
   set hitStop(v){hitStop=Math.max(hitStop,v);},set timeScale(v){timeScale=v;},get timeScale(){return timeScale;},
   pressE(down){if(down){keys.add('KeyE');tapUntil.KeyE=simTime+0.12;ePressN++;}else keys.delete('KeyE');},
   jump(){jumpQ=simTime+0.2;},

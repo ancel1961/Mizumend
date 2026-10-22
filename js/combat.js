@@ -11,7 +11,7 @@ const {HOOKS,scene,camera,player,cam,S,SFX,$,clamp,lerp,damp,rr,rnd,ease,angWrap
 
 /* ---------- difficulty ---------- */
 const DIFF_KEY='rebuild-the-valley:difficulty';
-const DIFF={gentle:{dmg:0,hp:0.7,tele:1.4,win:0.2,speed:0.8,label:'Gentle'},standard:{dmg:1,hp:1,tele:1,win:0.13,speed:1,label:'Standard'},brave:{dmg:1,hp:1.4,tele:0.72,win:0.085,speed:1.25,label:'Brave'}};
+const DIFF={gentle:{dmg:0,hp:0.7,tele:1.4,win:0.2,speed:0.8,fx:0.5,label:'Gentle'},standard:{dmg:1,hp:1,tele:1,win:0.13,speed:1,fx:1,label:'Standard'},brave:{dmg:1,hp:1.4,tele:0.72,win:0.085,speed:1.25,fx:1,label:'Brave'}};
 let diffName='standard';try{const v=localStorage.getItem(DIFF_KEY);if(DIFF[v])diffName=v;}catch(e){}
 const D=()=>DIFF[diffName];
 function setDiff(v){if(!DIFF[v])return;diffName=v;try{localStorage.setItem(DIFF_KEY,v);}catch(e){}renderDiffUI();}
@@ -19,7 +19,8 @@ function setDiff(v){if(!DIFF[v])return;diffName=v;try{localStorage.setItem(DIFF_
 /* ---------- state ---------- */
 const CB={max:5,breaths:5,inv:0,hurtT:-9,engagedT:-9,regen:0,down:false,
   strike:{t:-1,chain:0,next:false,cool:0,hitDone:false},flare:{charge:-1,cool:0},rollCool:0,shiftAt:-1,lastRoll:-9,
-  enemies:[],globs:[],puddles:[],waves:[],pockets:new Map(),cleared:new Set(),mend:null,tips:{}};
+  enemies:[],globs:[],puddles:[],waves:[],pockets:new Map(),cleared:new Set(),mend:null,tips:{},reg:[],nmCool:0,sling:{cool:0,aimAt:-1,shots:[]}};
+const feel=(stop,shake)=>{const f=D().fx;MZ.hitStop=stop*f;cam.shake=Math.max(cam.shake||0,shake*f);};
 const _v=new THREE.Vector3(),_w=new THREE.Vector3(),_q=new THREE.Vector3();
 const hasLantern=()=>MZ.hasPiece('lantern');
 const active=()=>MZ.mode==='play'&&!MZ.cine&&!MZ.journalOpen&&!MZ.talk.on&&!MZ.photo.on&&!MZ.decorOn&&!CB.down;
@@ -27,9 +28,12 @@ function tip(id,text,delay=0){if(CB.tips[id])return;CB.tips[id]=true;after(delay
 if(!S.blight||typeof S.blight!=='object')S.blight={koi:false};
 
 /* ---------- materials ---------- */
+const GLOW_TEX=(()=>{const cv=document.createElement('canvas');cv.width=cv.height=64;const g=cv.getContext('2d');const gr=g.createRadialGradient(32,32,0,32,32,32);
+  gr.addColorStop(0,'rgba(255,255,255,1)');gr.addColorStop(0.4,'rgba(255,255,255,.45)');gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(0,0,64,64);return new THREE.CanvasTexture(cv);})();
 const glowMat=(r,g,b)=>new THREE.MeshBasicMaterial({color:new THREE.Color(r,g,b)});
 const MUCK=makeToon(0x2e2a24,{noHeal:true,rim:0.5,tag:'muck'}),MOSS=makeToon(0x4f5d3a,{noHeal:true,tag:'moss'}),SILT=makeToon(0x5a5246,{noHeal:true,rim:0.4,tag:'silt'});
 const KNOT=glowMat(1.9,1.35,0.45),KNOT_HOT=glowMat(2.6,0.9,0.3);
+const ARMOR=makeToon(0x8a8272,{noHeal:true,rim:0.6,tag:'armor'}),EDGE=makeToon(0xe2d2a8,{noHeal:true,rim:0.8,tag:'armorEdge'});
 const DROP=new THREE.Color(0.85,0.95,1.05),MUD=new THREE.Color(0.32,0.28,0.22);
 
 /* ---------- the staff and the lantern on the player ---------- */
@@ -44,7 +48,7 @@ const gear=(()=>{
   const lan=new THREE.Group();lan.position.set(-0.24,0.42,0.06);player.body.add(lan);
   const cage=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.16,0.12),iron);lan.add(cage);
   const core=new THREE.Mesh(new THREE.BoxGeometry(0.08,0.11,0.08),glowMat(1.2,0.8,0.35));lan.add(core);
-  const halo=new THREE.Sprite(new THREE.SpriteMaterial({color:0xffc070,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,fog:false}));halo.scale.setScalar(0.8);lan.add(halo);
+  const halo=new THREE.Sprite(new THREE.SpriteMaterial({map:GLOW_TEX,color:0xffc070,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,fog:false}));halo.scale.setScalar(0.8);lan.add(halo);
   return {hand,back,lan,core,halo};
 })();
 
@@ -58,7 +62,7 @@ const ui=(()=>{
     <div id="cbTouch" hidden><div id="cbStick"><div class="nub"></div></div>
       <button id="tStrike" type="button" aria-label="Strike">Strike</button><button id="tDodge" type="button" aria-label="Dodge">Dodge</button>
       <button id="tLantern" type="button" aria-label="Lantern">Lantern</button><button id="tMend" type="button" aria-label="Interact or mend">E</button>
-      <button id="tJump" type="button" aria-label="Jump">Jump</button></div>`;
+      <button id="tJump" type="button" aria-label="Jump">Jump</button><button id="tSling" type="button" aria-label="Sling">Sling</button></div>`;
   document.body.appendChild(root);
   return {root,breaths:$('cbBreaths'),boss:$('cbBoss'),bossName:$('cbBossName'),pips:$('cbPips'),bossSub:$('cbBossSub'),mend:$('cbMend'),hurt:$('cbHurt'),fade:$('cbFade'),pop:$('cbPop'),touch:$('cbTouch')};
 })();
@@ -89,8 +93,8 @@ function doHits(W){const fx=Math.sin(player.face),fz=Math.cos(player.face);let a
     if(Math.abs((t.y??player.pos.y)-(player.pos.y+0.6))>2.3)continue;
     const a=d<0.3?0:Math.acos(clamp((dx*fx+dz*fz)/d,-1,1));if(a>W.arc)continue;
     const res=t.hit(W.dmg,dx/(d||1),dz/(d||1));if(res==='clang')clang=true;else if(res)any=true;}
-  if(any){MZ.hitStop=W.dmg>1?0.09:0.06;cam.shake=Math.max(cam.shake||0,W.dmg>1?0.55:0.38);SFX.knock(0,W.dmg>1?240:320);SFX.splash();}
-  else if(clang){MZ.hitStop=0.05;cam.shake=Math.max(cam.shake||0,0.3);SFX.knock(0,720);SFX.knock(0.04,980);player.vel.x=-fx*6;player.vel.z=-fz*6;player.kb=0.16;popText('Clang! Get behind it');}
+  if(any){feel(W.dmg>1?0.09:0.06,W.dmg>1?0.55:0.38);SFX.knock(0,W.dmg>1?240:320);SFX.splash();}
+  else if(clang){feel(0.05,0.3);SFX.knock(0,720);SFX.knock(0.04,980);player.vel.x=-fx*6;player.vel.z=-fz*6;player.kb=0.16;popText(hasLantern()?'Clang! Flare the lantern to flip it':'Clang! Get behind it');}
 }
 function dodge(){if(!active()||CB.rollCool>0||!player.grounded||CB.mend)return;
   let ix=0,iz=0;const k=MZ.keyDown;if(k('KeyW')||k('ArrowUp'))iz+=1;if(k('KeyS')||k('ArrowDown'))iz-=1;if(k('KeyD')||k('ArrowRight'))ix+=1;if(k('KeyA')||k('ArrowLeft'))ix-=1;
@@ -108,32 +112,35 @@ function flareRelease(){const f=CB.flare;if(f.charge<0)return;const c=f.charge;f
 function hurt(n,fromX,fromZ,kind){
   if(CB.inv>0||CB.down||MZ.mode!=='play')return false;
   const dx=player.pos.x-fromX,dz=player.pos.z-fromZ,l=Math.hypot(dx,dz)||1;
-  player.vel.x=dx/l*7.5;player.vel.z=dz/l*7.5;player.kb=0.24;player.vy=Math.max(player.vy,2.2);player.grounded=false;
-  CB.inv=1.0;CB.hurtT=MZ.simTime;CB.engagedT=MZ.simTime;MZ.hitStop=0.09;cam.shake=Math.max(cam.shake||0,0.7);
+  const kbk=diffName==='gentle'?0.5:1;player.vel.x=dx/l*7.5*kbk;player.vel.z=dz/l*7.5*kbk;player.kb=0.24*kbk;player.vy=Math.max(player.vy,2.2*kbk);player.grounded=false;
+  CB.inv=1.0;CB.hurtT=MZ.simTime;CB.engagedT=MZ.simTime;feel(0.09,0.7);
   ui.hurt.classList.remove('go');void ui.hurt.offsetWidth;ui.hurt.classList.add('go');SFX.knock(0,140);SFX.splash();
   const dmg=D().dmg*n;if(dmg>0){CB.breaths=Math.max(0,CB.breaths-dmg);if(CB.breaths===0)washAshore();}
   return true;}
-function nearMissCheck(){if(CB.inv>0&&MZ.simTime-CB.lastRoll<0.3&&MZ.timeScale===1){MZ.timeScale=0.35;popText('Close!');sparkle(player.pos.x,player.pos.y+1,player.pos.z,8);setTimeout(()=>{MZ.timeScale=1;},380);return true;}return false;}
+function nearMissCheck(){if(CB.inv>0&&MZ.simTime-CB.lastRoll<0.3&&MZ.timeScale===1&&CB.nmCool<=0){CB.nmCool=1.6;MZ.timeScale=0.35;popText('Close!');sparkle(player.pos.x,player.pos.y+1,player.pos.z,8);setTimeout(()=>{MZ.timeScale=1;},380);return true;}return false;}
 function washAshore(){
   CB.down=true;ui.fade.classList.add('on');SFX.splash();
   setTimeout(()=>{
-    const safe=koi.active?koi.safe:{x:2,z:60};teleport(safe.x,safe.z,koi.active?koi.c.x:0,koi.active?koi.c.z:0);
+    const ov=CB.safeOverride&&CB.safeOverride();const safe=ov||(koi.active?koi.safe:{x:2,z:60});const look=ov?ov.look:koi.active?koi.c:{x:0,z:0};teleport(safe.x,safe.z,look.x,look.z);
     for(const e of CB.enemies)removeEnemy(e,false);CB.enemies.length=0;CB.pockets.clear();clearHazards();
-    CB.breaths=CB.max;CB.inv=2;koi.onWash();
+    CB.breaths=CB.max;CB.inv=2;koi.onWash();for(const f of (CB.onWash||[]))f();
     setTimeout(()=>{ui.fade.classList.remove('on');CB.down=false;toast('You wash up on the bank, soggy but fine. Nothing is lost.');},700);
   },900);}
 
 /* ---------- targets: enemies and knots share one interface ---------- */
-function targets(){const out=[];for(const e of CB.enemies)if(!e.dead&&e.up>=1)out.push(e);if(koi.active)for(const k of koi.knots)if(k.alive&&k.on)out.push(k);return out;}
+function targets(){const out=[];for(const e of CB.enemies)if(!e.dead&&e.up>=1)out.push(e);if(koi.active)for(const k of koi.knots)if(k.alive&&k.on)out.push(k);for(const f of CB.reg)for(const t of f())out.push(t);return out;}
 
 /* ---------- muck-mites and silt-crabs ---------- */
 function makeMite(){const g=new THREE.Group();const b=new THREE.Mesh(new THREE.SphereGeometry(0.32,10,8),MUCK);b.scale.set(1,0.8,1);b.position.y=0.26;b.castShadow=true;g.add(b);addOutline(b,0.012);
   for(let i=0;i<3;i++){const d=new THREE.Mesh(new THREE.SphereGeometry(0.09,6,5),MUCK);d.position.set(Math.cos(i*2.1)*0.26,0.08,Math.sin(i*2.1)*0.26);g.add(d);}
-  const k=new THREE.Mesh(new THREE.SphereGeometry(0.09,8,6),KNOT);k.position.set(0,0.4,0.2);g.add(k);
+  const k=new THREE.Mesh(new THREE.SphereGeometry(0.11,8,6),KNOT);k.position.set(0,0.42,0.18);g.add(k);
+  const rim=new THREE.Mesh(new THREE.SphereGeometry(0.36,10,8),new THREE.MeshBasicMaterial({color:new THREE.Color(0.75,0.95,0.3),transparent:true,opacity:0.32,side:THREE.BackSide,blending:THREE.AdditiveBlending,depthWrite:false}));rim.scale.set(1.05,0.86,1.05);rim.position.y=0.26;g.add(rim);
+  const halo=new THREE.Sprite(new THREE.SpriteMaterial({map:GLOW_TEX,color:0xc8e060,transparent:true,opacity:0.5,blending:THREE.AdditiveBlending,depthWrite:false,fog:false}));halo.position.set(0,0.42,0.18);halo.scale.setScalar(0.7);g.add(halo);
   for(const sx of [-1,1]){const e=new THREE.Mesh(new THREE.SphereGeometry(0.035,6,5),glowMat(1.6,1.5,1.2));e.position.set(sx*0.1,0.32,0.26);g.add(e);}
-  return {g,body:b,knot:k};}
+  return {g,body:b,knot:k,rim,halo};}
 function makeCrab(){const g=new THREE.Group();const sh=new THREE.Mesh(new THREE.SphereGeometry(0.55,12,8),SILT);sh.scale.set(1.3,0.55,1.05);sh.position.y=0.38;sh.castShadow=true;g.add(sh);addOutline(sh,0.014);
-  const plate=new THREE.Mesh(new THREE.BoxGeometry(1.15,0.42,0.14),MUCK);plate.position.set(0,0.42,0.56);plate.rotation.x=-0.35;g.add(plate);
+  const plate=new THREE.Mesh(new THREE.BoxGeometry(1.15,0.42,0.14),ARMOR);plate.position.set(0,0.42,0.56);plate.rotation.x=-0.35;g.add(plate);addOutline(plate,0.02);
+  const edge=new THREE.Mesh(new THREE.BoxGeometry(1.22,0.06,0.18),EDGE);edge.position.set(0,0.64,0.5);edge.rotation.x=-0.35;g.add(edge);
   for(let i=0;i<3;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(0.14,6,5),MOSS);m.position.set(-0.4+i*0.4,0.62,0.46);m.scale.y=0.5;g.add(m);}
   const claws=[];for(const sx of [-1,1]){const c=new THREE.Group();c.position.set(sx*0.62,0.4,0.42);g.add(c);const a=new THREE.Mesh(new THREE.BoxGeometry(0.16,0.14,0.42),SILT);a.position.z=0.2;c.add(a);
     const p1=new THREE.Mesh(new THREE.ConeGeometry(0.1,0.3,5),MUCK);p1.rotation.x=Math.PI/2;p1.position.set(sx*0.05,0.04,0.48);c.add(p1);claws.push(c);}
@@ -161,7 +168,7 @@ function removeEnemy(e,checkPocket){scene.remove(e.g);e.dead=true;const i=CB.ene
     if(p){sparkle(p.x,groundH(p.x,p.z)+1,p.z,16);auSwell();toast('The blight lets go of the pile. Hold E to clear it.');}}}
 function enemyStep(e,dt){
   const sp=D().speed,tele=D().tele;e.t+=dt;e.flash=Math.max(0,(e.flash||0)-dt);const gh=groundH(e.x,e.z);
-  if(e.state==='rise'){e.up=Math.min(1,e.t/0.7);e.y=gh-0.6*(1-e.up);if(e.up>=1){e.state='seek';e.t=0;}if(rnd()<dt*12)puff(e.x,gh+0.1,e.z,1,MUD,0.2);place(e);return;}
+  if(e.state==='rise'){if(!e.splashed){e.splashed=true;addRipple(e.x,e.z,1.1);SFX.splash();for(let i=0;i<10;i++)fxSoft.emit(e.x,gh+0.1,e.z,rr(-1.5,1.5),rr(2,3.5),rr(-1.5,1.5),MUD,rr(0.1,0.2),rr(0.4,0.7),7,0.4);}e.up=Math.min(1,e.t/0.7);e.y=gh-0.6*(1-e.up);if(e.up>=1){e.state='seek';e.t=0;}if(rnd()<dt*12)puff(e.x,gh+0.1,e.z,1,MUD,0.2);place(e);return;}
   const dx=player.pos.x-e.x,dz=player.pos.z-e.z,d=Math.hypot(dx,dz)||1;
   if(e.kbT>0){e.kbT-=dt;e.x+=e.vx*dt;e.z+=e.vz*dt;}
   if(e.type==='mite'){
@@ -171,7 +178,8 @@ function enemyStep(e,dt){
     else if(e.state==='tell'){if(e.t>0.62*tele){e.state='lunge';e.t=0;SFX.jump();}}
     else if(e.state==='lunge'){move(e,e.lx*8*sp,e.lz*8*sp,dt);if(Math.hypot(player.pos.x-e.x,player.pos.z-e.z)<0.75&&Math.abs(player.pos.y-e.y)<1){if(!nearMissCheck())hurt(1,e.x,e.z);}if(e.t>0.42){e.state='recover';e.t=0;}}
     else if(e.state==='recover'){if(e.t>0.9/sp){e.state='seek';e.t=0;}}
-    const sq=e.state==='tell'?1+0.25*Math.sin(e.t*40):1;e.body.scale.set(sq*1.05,0.8/sq,sq*1.05);
+    const sq=e.state==='tell'?1+0.3*Math.min(1,e.t/(0.62*tele)):1;const st=e.state==='lunge'?1.45:1;e.body.scale.set(sq*1.05/Math.sqrt(st),0.8/sq,sq*1.05*st);
+    const hot=e.state==='tell'||e.state==='lunge';e.halo.material.opacity=hot?0.9:0.4+0.15*Math.sin(MZ.simTime*5+e.ph);e.halo.scale.setScalar(hot?1.2:0.7);e.rim.material.opacity=hot?0.6:0.3;e.rim.material.color.setRGB(hot?1.0:0.75,hot?0.7:0.95,0.3);
     e.knot.material=e.state==='tell'||e.state==='lunge'?KNOT_HOT:KNOT;
     e.hop=e.state==='lunge'?Math.sin(clamp(e.t/0.42,0,1)*Math.PI)*0.7:e.state==='seek'?Math.abs(Math.sin(e.t*9+e.ph))*0.12:0;
   }else{
@@ -254,7 +262,7 @@ const koi=(()=>{
       hit(dmg){if(!this.on)return false;this.hp-=dmg;this.flash=0.15;koi.onKnotHit(this);return true;}};knots.push(k);return k;};
   mk(1.12,0.15,1.2,1);mk(-1.12,0.15,0.2,1);mk(0,1.05,1.9,2);mk(0,1.0,-0.7,2);mk(0,0.55,0.85,3);
   knots[4].m.parent.remove(knots[4].m);head.add(knots[4].m);knots[4].m.position.set(0,0.55,0.25);
-  const glow=new THREE.Sprite(new THREE.SpriteMaterial({color:0xffb060,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,fog:false}));glow.scale.setScalar(6);head.add(glow);
+  const glow=new THREE.Sprite(new THREE.SpriteMaterial({map:GLOW_TEX,color:0xffb060,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,fog:false}));glow.scale.setScalar(6);head.add(glow);
   /* the old gate wheel on the bank */
   const nx=-c.tz,nz=c.tx;const wp=polyPoint(OUTLET,SLUICE_S-0.6);const side=(sluice.south.x-sluice.x)*nx+(sluice.south.z-sluice.z)*nz>0?1:-1;
   const wx=wp.x+nx*side*3.2,wz=wp.z+nz*side*3.2;
@@ -262,7 +270,7 @@ const koi=(()=>{
   const wm=makeToon(0x5b4130,{noHeal:true});const post=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.15,1.2,6),wm);post.position.y=0.6;wheel.add(post);
   const wr=new THREE.Group();wr.position.y=1.25;wr.rotation.x=Math.PI/2;wheel.add(wr);
   wr.add(new THREE.Mesh(new THREE.TorusGeometry(0.55,0.06,6,18),wm));for(let i=0;i<4;i++){const sp=new THREE.Mesh(new THREE.BoxGeometry(0.06,1.1,0.06),wm);sp.rotation.z=i*Math.PI/4;wr.add(sp);}
-  const wglow=new THREE.Sprite(new THREE.SpriteMaterial({color:0xffd080,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,fog:false}));wglow.position.y=1.3;wglow.scale.setScalar(2.4);wheel.add(wglow);
+  const wglow=new THREE.Sprite(new THREE.SpriteMaterial({map:GLOW_TEX,color:0xffd080,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,fog:false}));wglow.position.y=1.3;wglow.scale.setScalar(2.4);wheel.add(wglow);
   const sx=c.x+nx*side*9,sz=c.z+nz*side*9;
   return {g,body,segs,patches,lumps,tail,head,knots,glow,crust,skin,patch,c:{x:c.x,z:c.z},tx:c.tx,tz:c.tz,nx,nz,yaw,wheel,wr,wglow,wx,wz,safe:{x:sx,z:sz},
     active:false,state:'asleep',phase:0,t:0,atk:null,atkT:0,next:2,stunT:0,resist:0,turns:0,gateOpen:false,window:0,slide:0,roll:0,rollT:0,mended:false,swim:0,drumT:0,lostT:0,
@@ -272,20 +280,23 @@ const koi=(()=>{
     onWash(){this.atk=null;this.next=2.5;this.stunT=0;if(this.phase===3&&!this.gateOpen)this.turns=Math.max(0,this.turns-1);}};
 })();
 function koiWorld(lx,ly,lz,out){out.set(lx,ly,lz);koi.body.localToWorld(out);return out;}
-function koiReset(){const k=koi;k.g.position.set(k.c.x,MZ.levelCur-0.15,k.c.z);k.g.visible=!S.blight.koi&&stage()<2;k.active=false;k.state='asleep';k.phase=0;
+const dawnKoi=()=>stage()>=2&&!S.blight.koiRe&&MZ.hours>=4.6&&MZ.hours<=8;
+function koiReset(){const k=koi;k.g.position.set(k.c.x,MZ.levelCur-0.15,k.c.z);k.g.visible=(!S.blight.koi&&stage()<2)||dawnKoi();
+  for(const s of k.segs)s.material=k.crust;for(const p of k.patches)p.visible=false;for(const l of k.lumps)if(l.mesh)l.mesh.visible=true;k.tail.traverse(o=>{if(o.isMesh)o.material=k.crust;});k.mended=false;k.gateOpen=false;k.slide=0;k.turns=0;k.active=false;k.state='asleep';k.phase=0;
   for(const n of k.knots){n.alive=true;n.on=false;n.m.visible=true;}}
 koiReset();
 HOOKS.sluiceBlocked=()=>{if(S.blight.koi||stage()!==1)return null;return {ok:false,text:koi.state==='asleep'?'Something huge is wedged in the old gate…':'The Old Koi is jammed in the gate'};};
 function koiStart(){
   const k=koi;k.active=true;k.state='intro';k.t=0;k.phase=1;const hp=Math.round(5*D().hp);
   for(const n of k.knots){n.max=n.hp=n.phase===3?Math.round(3*D().hp):hp;n.alive=true;n.on=n.phase===1;n.m.visible=true;}
-  startCine({k:'Mill Pond',t:'The Old Koi',s:'Something has grown over him in the still water. Break the knots. Open the gate.'},new THREE.Vector3(k.c.x,0,k.c.z),{pivot:new THREE.Vector3(k.c.x,0,k.c.z),radius:13,height:4.5,lookY:MZ.levelCur-3,dir:new THREE.Vector3(player.pos.x-k.c.x,0,player.pos.z-k.c.z)});
+  startCine(k.rematch?{k:'Mill Pond · at dawn',t:'The Old Koi',s:'The still water crept back into the outlet overnight. So did he. One more time, then.'}:{k:'Mill Pond',t:'The Old Koi',s:'Something has grown over him in the still water. Break the knots. Open the gate.'},new THREE.Vector3(k.c.x,0,k.c.z),{pivot:new THREE.Vector3(k.c.x,0,k.c.z),radius:13,height:4.5,lookY:MZ.levelCur-3,dir:new THREE.Vector3(player.pos.x-k.c.x,0,player.pos.z-k.c.z)});
   SFX.knock(0.5,70);SFX.knock(1.1,60);auSwell();cam.shake=0.6;k.next=1.2;ui.boss.hidden=false;renderBoss();}
 function renderBoss(){const k=koi;ui.bossName.textContent='The Old Koi';ui.pips.innerHTML=k.knots.map(n=>`<span class="${n.alive?(n.on?'on':''):'gone'}"></span>`).join('');
   ui.bossSub.textContent=k.phase===1?'Break the knots on his flanks':k.phase===2?'Flare or dodge his slam, then strike the knots on his back':k.phase===3?(k.gateOpen?'Strike the knot on his head!':`Turn the old gate wheel (${k.turns}/3)`):'';}
 koi.checkPhase=function(){const k=koi;
   if(k.phase===1&&k.knots.filter(n=>n.phase===1).every(n=>!n.alive)){k.phase=2;k.atk=null;k.next=2.2;cam.shake=1;auSwell();SFX.knock(0,60);SFX.knock(0.3,70);toast('The Old Koi heaves against the gate! The knots on his back are showing.');for(const n of k.knots)if(n.phase===2)n.on=false;shockwave(k.c.x,k.c.z,10,7);}
-  else if(k.phase===2&&k.knots.filter(n=>n.phase===2).every(n=>!n.alive)){k.phase=3;k.atk=null;k.next=2.5;k.turns=0;auSwell();toast('He is jammed fast. Turn the old gate wheel on the bank!');}
+  else if(k.phase===2&&k.knots.filter(n=>n.phase===2).every(n=>!n.alive)){k.phase=3;k.atk=null;k.next=2.5;k.turns=0;auSwell();
+    if(k.rematch||stage()>=2){k.gateOpen=true;k.window=7;k.next=7.5;toast('The new gate holds. He lunges for it, and his head knot is showing. Strike!');}else toast('He is jammed fast. Turn the old gate wheel on the bank!');}
   else if(k.phase===3&&!k.knots[4].alive){k.state='bare';k.atk=null;k.window=0;mendStart();}
   renderBoss();};
 function koiAttack(){const k=koi;const lp=_q.set(player.pos.x,player.pos.y,player.pos.z);k.body.worldToLocal(lp);
@@ -296,17 +307,18 @@ function koiAttack(){const k=koi;const lp=_q.set(player.pos.x,player.pos.y,playe
   if(d<4.2&&Math.abs(lp.x)>0.4){k.atk={kind:'slam',t:0,tell:1.0*tele,side:Math.sign(lp.x)};return;}
   k.atk={kind:'spit',t:0,tell:0.7*tele};}
 function koiStep(dt){
-  const k=koi;if(!k.g.visible&&!k.mended)return;
+  const k=koi;if(!k.active&&k.state==='asleep')k.g.visible=(!S.blight.koi&&stage()<2)||dawnKoi();if(!k.g.visible&&!k.mended)return;
   const lv=MZ.levelCur;k.g.position.y=damp(k.g.position.y,lv-0.15+(k.state==='bare'?0.25:0),3,dt);
   const pd=Math.hypot(player.pos.x-k.c.x,player.pos.z-k.c.z);
   if(k.state==='asleep'){k.body.rotation.z=Math.sin(MZ.simTime*0.4)*0.03;k.tail.rotation.y=Math.sin(MZ.simTime*0.5)*0.1;
     if(stage()===1&&!S.blight.koi&&pd<15&&MZ.mode==='play'&&!MZ.cine)koiStart();
+    else if(dawnKoi()&&k.g.visible&&pd<14&&MZ.mode==='play'&&!MZ.cine){k.rematch=true;koiStart();}
     else if(stage()===0&&pd<12&&!CB.tips.koi0){CB.tips.koi0=true;toast('Something big is sleeping in the outlet channel. Clear the pond debris first.');}
     return;}
   if(k.state==='swim'){k.swim+=dt;const s=SLUICE_S-5.2-k.swim*3.2;const p=polyPoint(OUTLET,Math.max(0,s));k.g.position.x=p.x;k.g.position.z=p.z;k.g.rotation.y=Math.atan2(-p.tx,-p.tz);
     k.tail.rotation.y=Math.sin(MZ.simTime*6)*0.45;if(rnd()<dt*6)addRipple(p.x,p.z,1.2);k.glow.material.opacity=0.5;
     if(s<0||k.swim>9){k.g.visible=false;k.mended=false;}return;}
-  if(!k.active)return;
+  if(!k.active){if(k.state==='asleep'||k.state==='mended')k.g.visible=(!S.blight.koi&&stage()<2)||dawnKoi()||k.state==='mended';return;}
   if(k.state==='intro'){if(!MZ.cine){k.state='fight';k.t=0;}return;}
   CB.engagedT=MZ.simTime;
   if(pd>34){k.lostT+=dt;if(k.lostT>4){k.active=false;k.state='asleep';ui.boss.hidden=true;for(const n of k.knots)n.on=false;toast('The Old Koi settles back into the mud. He will wait.');return;}}else k.lostT=0;
@@ -362,20 +374,52 @@ INTERACTS.push({x:koi.wx,z:koi.wz,r:2.4,state(){const k=koi;if(!k.active||k.phas
     else{toast(`The wheel gives a quarter-turn (${k.turns}/3). He's fighting it!`);k.next=Math.min(k.next,0.8);}
     renderBoss();},pos:()=>_w.set(koi.wx,groundH(koi.wx,koi.wz)+2.0,koi.wz)});
 
+/* ---------- the seed sling ---------- */
+const hasSling=()=>!!S.blight.sling;
+const SEED=makeToon(0x9a7a3a,{noHeal:true,tag:'seed'});
+const slingables=[];/* extra things the sling can hit that strikes can't (nests, high knots); {x,y,z,r,sling(),alive} */
+function slingCandidates(){const out=[];for(const t of targets())out.push(t);for(const t of slingables)if(t.alive!==false)out.push(t);return out;}
+function slingPick(maxAng){camera.getWorldDirection(_v);let best=null,bs=1e9;
+  for(const t of slingCandidates()){const ty=(t.y??player.pos.y)+(t.type?0.4:0);_w.set(t.x-camera.position.x,ty-camera.position.y,t.z-camera.position.z);const d=_w.length();if(d<1||Math.hypot(t.x-player.pos.x,t.z-player.pos.z)>26)continue;
+    const a=Math.acos(clamp(_w.dot(_v)/d,-1,1));if(a>maxAng)continue;const sc=a*3+d*0.02;if(sc<bs){bs=sc;best=t;}}return best;}
+function slingFire(t){if(!active()||!hasSling()||CB.sling.cool>0)return;CB.sling.cool=0.42;
+  const sx=player.pos.x+Math.sin(player.face)*0.4,sy=player.pos.y+1.35,sz=player.pos.z+Math.cos(player.face)*0.4;
+  let tx,ty,tz;if(t){tx=t.x;ty=t.y??player.pos.y+0.6;tz=t.z;player.faceT=player.face=Math.atan2(tx-player.pos.x,tz-player.pos.z);player.faceLock=0.3;}
+  else{camera.getWorldDirection(_v);tx=sx+_v.x*22;ty=sy+_v.y*22+1;tz=sz+_v.z*22;player.faceT=player.face=Math.atan2(_v.x,_v.z);player.faceLock=0.3;}
+  const m=new THREE.Mesh(new THREE.SphereGeometry(0.08,6,5),SEED);m.position.set(sx,sy,sz);scene.add(m);
+  const d=Math.hypot(tx-sx,ty-sy,tz-sz);CB.sling.shots.push({m,sx,sy,sz,tx,ty,tz,t:0,dur:Math.max(0.12,d/34),target:t});
+  SFX.knock(0,900);SFX.knock(0.03,1300);CB.strike.t=-1;CB.sling.pose=0.25;
+  tip('sling','The seed sling: tap Q to shoot the nearest target, or hold Q and let go to aim at the middle of the screen.');}
+function slingStep(dt){CB.sling.pose=Math.max(0,(CB.sling.pose||0)-dt);
+  for(let i=CB.sling.shots.length-1;i>=0;i--){const s=CB.sling.shots[i];s.t+=dt;const k=Math.min(1,s.t/s.dur);
+    s.m.position.set(lerp(s.sx,s.tx,k),lerp(s.sy,s.ty,k)+Math.sin(k*Math.PI)*0.6,lerp(s.sz,s.tz,k));
+    if(k>=1){scene.remove(s.m);CB.sling.shots.splice(i,1);const t=s.target;
+      if(t&&(t.alive!==false)){const dx=t.x-player.pos.x,dz=t.z-player.pos.z,l=Math.hypot(dx,dz)||1;const r=t.sling?t.sling(1):t.hit?t.hit(1,dx/l,dz/l,'sling'):false;
+        if(r&&r!=='clang'){feel(0.04,0.2);SFX.knock(0,420);sparkle(s.tx,s.ty,s.tz,6);}else if(r==='clang'){SFX.knock(0,760);popText('Ping!');}}
+      else puff(s.tx,s.ty,s.tz,4,new THREE.Color(0.6,0.5,0.35),0.15);}}}
+const reticle=(()=>{const e=document.createElement('div');e.id='cbReticle';e.hidden=true;ui.root.appendChild(e);return e;})();
+function slingAimStart(){if(!active())return;if(!hasSling()){if(MZ.oStage()>=0)tip('nosling','No sling yet. Someone left one hanging at the orchard gate.');return;}CB.sling.aimAt=MZ.simTime;}
+function slingAimRelease(){const a=CB.sling.aimAt;CB.sling.aimAt=-1;reticle.hidden=true;if(a<0)return;const held=MZ.simTime-a;slingFire(slingPick(held<0.22?0.6:0.14));}
+function slingAimUI(){const on=CB.sling.aimAt>=0&&MZ.simTime-CB.sling.aimAt>=0.22;reticle.hidden=!on;if(on){const t=slingPick(0.14);reticle.classList.toggle('lock',!!t);}}
+
 /* ---------- mending: the weaving finisher ---------- */
-function mendStart(){CB.mend={n:0,need:5,t:0,period:1.0*Math.max(0.8,D().tele),miss:0};ui.mend.hidden=false;CB.strike.t=-1;renderMend();toast('His shell is broken. Mend him: press E (or Mend) as the ring meets the circle.');SFX.moment();auSwell();}
+function mendStart(spec){spec=spec||KOI_MEND;CB.mend={n:0,need:5,t:0,period:1.0*Math.max(0.8,D().tele),miss:0,spec};ui.mend.hidden=false;CB.strike.t=-1;renderMend();toast(spec.intro);SFX.moment();auSwell();}
 function renderMend(){const m=CB.mend;if(!m)return;ui.mend.querySelector('.dots').innerHTML=Array.from({length:m.need},(_,i)=>`<i class="${i<m.n?'on':''}"></i>`).join('');}
 function mendStep(dt){const m=CB.mend;if(!m)return;m.t+=dt;const k=m.t/m.period;const sc=2.2-1.7*k;ui.mend.querySelector('.ring').style.transform=`translate(-50%,-50%) scale(${Math.max(0.2,sc)})`;
   if(k>1.25){m.t=0;m.miss++;}
-  const kp=koi;kp.body.rotation.z=damp(kp.body.rotation.z,0,3,dt);kp.glow.material.opacity=0.25+0.4*(m.n/m.need);}
+  if(m.spec.step)m.spec.step(dt,m.n/m.need);}
 function mendPress(){const m=CB.mend;if(!m)return false;const sc=2.2-1.7*(m.t/m.period);const ok=Math.abs(sc-0.5)<D().win*2.6;
-  if(ok){m.n++;m.t=0;SFX.knock(0,520+m.n*80);koiWorld(0,0.6,2-m.n*0.8,_w);sparkle(_w.x,_w.y,_w.z,12);for(let i=0;i<10;i++){const k=i/10;fxGlow.emit(lerp(player.pos.x,_w.x,k),lerp(player.pos.y+1.2,_w.y,k),lerp(player.pos.z,_w.z,k),0,0.2,0,new THREE.Color(2.4,2.0,1.0),0.08,0.5,0,0.5,0);}
-    renderMend();if(m.n>=m.need)mendDone();}
+  if(ok){m.n++;m.t=0;SFX.knock(0,520+m.n*80);m.spec.point(m.n,_w);sparkle(_w.x,_w.y,_w.z,12);for(let i=0;i<10;i++){const k=i/10;fxGlow.emit(lerp(player.pos.x,_w.x,k),lerp(player.pos.y+1.2,_w.y,k),lerp(player.pos.z,_w.z,k),0,0.2,0,new THREE.Color(2.4,2.0,1.0),0.08,0.5,0,0.5,0);}
+    renderMend();if(m.n>=m.need){CB.mend=null;ui.mend.hidden=true;m.spec.done();}}
   else{m.t=0;m.miss++;cam.shake=Math.max(cam.shake||0,0.2);popText('Steady…');SFX.knock(0,200);}
   return true;}
-function mendDone(){CB.mend=null;ui.mend.hidden=true;const k=koi;k.state='mended';k.active=false;ui.boss.hidden=true;clearHazards();for(const e of [...CB.enemies])popEnemy(e);
+const KOI_MEND={intro:'His shell is broken. Mend him: press E (or Mend) as the ring meets the circle.',point:(n,out)=>koiWorld(0,0.6,2-n*0.8,out),
+  step:(dt,k)=>{koi.body.rotation.z=damp(koi.body.rotation.z,0,3,dt);koi.glow.material.opacity=0.25+0.4*k;},done:()=>mendDone()};
+function mendDone(){const k=koi;k.state='mended';k.active=false;ui.boss.hidden=true;clearHazards();for(const e of [...CB.enemies])popEnemy(e);
   for(const s of k.segs)s.material=k.skin;for(const p of k.patches)p.visible=true;for(const l of k.lumps){if(l.mesh){l.mesh.visible=false;continue;}koiWorld(l.position.x,l.position.y,l.position.z,_w);puff(_w.x,_w.y,_w.z,6,MUD,0.4);}
   k.tail.traverse(o=>{if(o.isMesh)o.material=k.skin;});k.glow.material.opacity=0.6;sparkle(k.g.position.x,MZ.levelCur+1.5,k.g.position.z,40);auSwell();SFX.moment();cam.shake=0.5;player.happy=8;
+  const re=k.rematch;k.rematch=false;
+  if(re){S.blight.koiRe=true;if(!S.cosmetics.bands)S.cosmetics.bands={};S.cosmetics.bands.koi=true;writeSave();MZ.renderValleyPane();showCardBrief({k:'Mill Pond · at dawn',t:'The Old Koi, again',s:'He remembers you, a little. He leaves a scale on the bank, gold at the edges.'});after(5,()=>toast('New in your wardrobe: the Koi-scale band (journal, Valley & settings).'));after(5,()=>{k.state='swim';k.swim=0;k.mended=true;});return;}
   S.blight.koi=true;writeSave();
   showCardBrief({k:'Mill Pond · mended',t:'The Old Koi',s:'Gold and white under all that silt. For the first time in years, the water moves.'});
   after(5,()=>{k.state='swim';k.swim=0;k.mended=true;});
@@ -389,8 +433,8 @@ canvas.addEventListener('contextmenu',e=>e.preventDefault());
 window.addEventListener('keydown',e=>{if(MZ.mode!=='play'||e.repeat)return;
   if(CB.mend&&(e.code==='KeyE'||e.code==='Space')){e.preventDefault();mendPress();return;}
   if(MZ.decorOn||MZ.journalOpen||MZ.photo.on||MZ.talk.on)return;
-  if(e.code==='KeyF')strike();else if(e.code==='KeyR')flareStart();else if(e.code==='ShiftLeft'||e.code==='ShiftRight')CB.shiftAt=performance.now();});
-window.addEventListener('keyup',e=>{if(e.code==='KeyR')flareRelease();if((e.code==='ShiftLeft'||e.code==='ShiftRight')&&CB.shiftAt>0){if(performance.now()-CB.shiftAt<190)dodge();CB.shiftAt=-1;}});
+  if(e.code==='KeyF')strike();else if(e.code==='KeyR')flareStart();else if(e.code==='KeyQ')slingAimStart();else if(e.code==='ShiftLeft'||e.code==='ShiftRight')CB.shiftAt=performance.now();});
+window.addEventListener('keyup',e=>{if(e.code==='KeyR')flareRelease();if(e.code==='KeyQ')slingAimRelease();if((e.code==='ShiftLeft'||e.code==='ShiftRight')&&CB.shiftAt>0){if(performance.now()-CB.shiftAt<190)dodge();CB.shiftAt=-1;}});
 /* touch: a left stick, and buttons on the right */
 const touch={on:false,id:null,ox:0,oy:0,keys:new Set()};
 function setStick(dx,dy){const want=new Set();const dz=18;if(dy<-dz)want.add('KeyW');if(dy>dz)want.add('KeyS');if(dx<-dz)want.add('KeyA');if(dx>dz)want.add('KeyD');
@@ -405,7 +449,7 @@ const stickEnd=e=>{if(e.pointerId!==touch.id)return;touch.id=null;setStick(0,0);
 $('cbStick').addEventListener('pointerup',stickEnd);$('cbStick').addEventListener('pointercancel',stickEnd);
 const tb=(id,down,up)=>{const b=$(id);b.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();b.classList.add('down');down();});const u=e=>{b.classList.remove('down');if(up)up();};b.addEventListener('pointerup',u);b.addEventListener('pointercancel',u);b.addEventListener('pointerleave',u);};
 tb('tStrike',()=>{if(CB.mend)mendPress();else strike();});tb('tDodge',()=>dodge());tb('tLantern',()=>flareStart(),()=>flareRelease());
-tb('tMend',()=>{if(CB.mend){mendPress();return;}MZ.pressE(true);},()=>MZ.pressE(false));tb('tJump',()=>MZ.jump());
+tb('tMend',()=>{if(CB.mend){mendPress();return;}MZ.pressE(true);},()=>MZ.pressE(false));tb('tJump',()=>MZ.jump());tb('tSling',()=>slingFire(slingPick(0.9)));
 
 /* ---------- difficulty picker in the journal ---------- */
 function renderDiffUI(){let box=$('cbDiff');const host=$('pValley');if(!host)return;
@@ -413,7 +457,7 @@ function renderDiffUI(){let box=$('cbDiff');const host=$('pValley');if(!host)ret
     box.addEventListener('click',e=>{const b=e.target.closest('[data-diff]');if(b){setDiff(b.dataset.diff);SFX.page();lastBreathKey='';}});}
   box.innerHTML=`<h2>Adventure</h2><p class="qnote">How fights feel. Change it any time; nothing is lost either way.</p><div class="row">${Object.entries(DIFF).map(([k,v])=>`<button class="pbtn${k===diffName?' on':''}" type="button" data-diff="${k}" aria-pressed="${k===diffName}">${v.label}</button>`).join('')}</div>
     <p class="qnote">${diffName==='gentle'?'You can\'t be hurt, enemies are slower, and the mending ring is forgiving.':diffName==='brave'?'Faster, tougher blight and tighter mending. For the heroic.':'Real fights: watch the glow, dodge on the tell, strike the knots.'}</p>
-    <p class="qnote">Strike: click or F · Dodge: tap Shift · Lantern: hold right-click or R · Mend: E</p>`;}
+    <p class="qnote">Strike: click or F · Dodge: tap Shift · Lantern: hold right-click or R · Sling: Q (tap, or hold to aim) · Mend: E</p>`;}
 renderDiffUI();
 
 /* ---------- the prologue's last beat ---------- */
@@ -428,11 +472,11 @@ function teaserStep(dt){if(!(CB.teaser>0))return;CB.teaser-=dt;if(rnd()<dt*30){c
 /* ---------- per-step and per-frame ---------- */
 HOOKS.sim.push(dt=>{
   if(MZ.mode!=='play')return;
-  CB.inv=Math.max(0,CB.inv-dt);CB.rollCool=Math.max(0,CB.rollCool-dt);CB.flare.cool=Math.max(0,CB.flare.cool-dt);
+  CB.inv=Math.max(0,CB.inv-dt);CB.rollCool=Math.max(0,CB.rollCool-dt);CB.nmCool=Math.max(0,CB.nmCool-dt);CB.sling.cool=Math.max(0,CB.sling.cool-dt);CB.flare.cool=Math.max(0,CB.flare.cool-dt);
   if(CB.flare.charge>=0){CB.flare.charge+=dt;player.slow=Math.min(player.slow||1,0.5);}
   swingStep(dt);pocketStep();
   for(const e of [...CB.enemies])if(!e.dead)enemyStep(e,dt);
-  hazardStep(dt);koiStep(dt);koiPush();mendStep(dt);teaserStep(dt);
+  hazardStep(dt);koiStep(dt);koiPush();mendStep(dt);teaserStep(dt);slingStep(dt);
   if(MZ.simTime-CB.engagedT>6&&CB.breaths<CB.max){CB.regen+=dt;if(CB.regen>3.5){CB.regen=0;CB.breaths++;}}else CB.regen=0;
   if(CB.enemies.length)CB.engagedT=MZ.simTime;
 });
@@ -444,6 +488,7 @@ HOOKS.pose.push(dt=>{
     else if(s.chain===2){aR.rotation.x=-1.4;aR.rotation.z=lerp(1.6,-1.0,ease(clamp(s.t/W.hit,0,1)));}
     else{aR.rotation.x=-1.5;aR.rotation.z=0.4;player.root.rotation.y=player.face+ease(k)*Math.PI*2;aL.rotation.z=-1.2;}}
   else if(fighting){aR.rotation.x=-0.9;aR.rotation.z=0.15;}
+  if(CB.sling.pose>0||(CB.sling.aimAt>=0&&MZ.simTime-CB.sling.aimAt>0.2)){aL.rotation.x=-1.6;aL.rotation.z=-0.2;aR.rotation.x=-1.2;}
   if(player.roll>0){const k=1-player.roll/0.36;player.body.rotation.x=k*Math.PI*2;player.body.position.y=Math.sin(k*Math.PI)*0.25;}
   if(CB.flare.charge>=0){aL.rotation.x=-1.4;const c=Math.min(1,CB.flare.charge/0.6);gear.halo.material.opacity=0.3+0.5*c;gear.halo.scale.setScalar(0.8+c*1.4);gear.core.material.color.setRGB(1.2+c*1.6,0.8+c*0.9,0.35+c*0.3);}
   else{gear.halo.material.opacity=Math.max(0,gear.halo.material.opacity-dt*2.5);gear.halo.scale.setScalar(Math.max(0.8,gear.halo.scale.x-dt*8));gear.core.material.color.setRGB(1.2,0.8,0.35);}
@@ -451,11 +496,23 @@ HOOKS.pose.push(dt=>{
   if(CB.inv>0&&MZ.simTime-CB.hurtT<1.0)player.root.visible=Math.floor(MZ.simTime*20)%2===0;else player.root.visible=true;
 });
 let uiAcc=0;
-HOOKS.vis.push(dt=>{uiAcc+=dt;if(uiAcc<0.1)return;uiAcc=0;renderBreaths();if(koi.active&&!ui.boss.hidden)renderBoss();if(!koi.active&&!CB.mend)ui.boss.hidden=true;
+const titleKoi=(()=>{const m=new THREE.Mesh(new THREE.CircleGeometry(1,24).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0x080a0c,transparent:true,opacity:0.32,depthWrite:false}));m.scale.set(1.1,1,3.4);m.renderOrder=5;scene.add(m);
+  const glow=new THREE.Sprite(new THREE.SpriteMaterial({map:GLOW_TEX,color:0xd8e070,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,fog:false}));glow.scale.setScalar(2.2);scene.add(glow);return {m,glow};})();
+HOOKS.vis.push(dt=>{
+  const tm=MZ.mode==='title';titleKoi.m.visible=titleKoi.glow.visible=tm;
+  if(tm){const t=MZ.G.uTime.value*0.16;const ca=Math.atan2(camera.position.z,camera.position.x);const sway=Math.sin(t)*14,rad=26+Math.cos(t*0.7)*4;
+    const x=Math.cos(ca)*rad-Math.sin(ca)*sway,z=Math.sin(ca)*rad+Math.cos(ca)*sway;const vx=-Math.sin(ca)*Math.cos(t),vz=Math.cos(ca)*Math.cos(t);
+    titleKoi.m.position.set(x,MZ.levelCur+0.04,z);titleKoi.m.rotation.y=Math.atan2(vx,vz);titleKoi.m.scale.set(1.7,1,4.6);
+    titleKoi.glow.position.set(x+vx*3.2,MZ.levelCur+0.15,z+vz*3.2);const p=0.5+0.5*Math.sin(MZ.G.uTime.value*2.2);titleKoi.glow.material.opacity=0.15+0.35*p*p;}
+  const boss=koi.active&&koi.state!=='intro'?{x:koi.g.position.x,z:koi.g.position.z}:CB.bossFrame?CB.bossFrame():null;
+  cam.frame=boss&&!MZ.cine?{x:boss.x,z:boss.z,dist:boss.dist||11,pitch:boss.pitch||0.62}:null;
+  slingAimUI();
+});
+HOOKS.vis.push(dt=>{uiAcc+=dt;if(uiAcc<0.1)return;uiAcc=0;renderBreaths();if(koi.active&&!ui.boss.hidden)renderBoss();if(!koi.active&&!CB.mend&&!CB.otherBoss)ui.boss.hidden=true;
   ui.root.classList.toggle('hidden',MZ.mode!=='play'||MZ.photo.on);ui.boss.style.visibility=MZ.cine?'hidden':'visible';});
 /* keep the koi in step with saves loaded after this module ran */
 HOOKS.project.push(()=>{});
 let lastSync=-1;HOOKS.sim.push(()=>{const key=(S.blight&&S.blight.koi?1:0)+stage()*2;if(key===lastSync)return;lastSync=key;if(!S.blight||typeof S.blight!=='object')S.blight={koi:false};if(!koi.active&&koi.state!=='swim'&&koi.state!=='mended')koiReset();});
 
-MZ.combat={CB,koi,spawnEnemy,koiStart,mendPress,strike,dodge,flareStart,flareRelease,setDiff,hurt,targets,mendStart,popEnemy};
-if(PARAMS.debug==="1"||PARAMS.debug==="true")window.__mzc={CB,koi,spawnEnemy,koiStart,mendPress,strike,dodge,flareStart,flareRelease,setDiff,hurt,targets,mendStart};
+MZ.combat={GLOW_TEX,CB,koi,spawnEnemy,koiStart,mendPress,strike,dodge,flareStart,flareRelease,setDiff,hurt,targets,mendStart,popEnemy,feel,popText,tip,nearMissCheck,spit,shockwave,clearHazards,slingFire,slingPick,slingables,hasSling,hasLantern,D,ui,KNOT,KNOT_HOT,MUCK,MOSS,glowMat,renderBossBar:null,removeEnemy};
+if(PARAMS.debug==="1"||PARAMS.debug==="true")window.__mzc=Object.assign(MZ.combat,{CB,koi,spawnEnemy,koiStart,mendPress,strike,dodge,flareStart,flareRelease,setDiff,hurt,targets,mendStart});

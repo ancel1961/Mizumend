@@ -113,7 +113,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
 
 #hint{position:absolute;left:calc(18px + env(safe-area-inset-left,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));max-width:min(460px,calc(100vw - 240px));margin:0;padding:6px 14px 5px;color:var(--ink);font-size:14.5px;line-height:1.5;background:rgba(242,230,201,.9);border-radius:16px;box-shadow:0 6px 18px -8px rgba(18,12,6,.55);transition:opacity 1.2s ease}
 #hint.gone{opacity:0}
-#sandbox{position:absolute;left:50%;top:calc(10px + env(safe-area-inset-top,0px));transform:translateX(-50%);padding:3px 12px;font-size:13px;color:#fff7de;background:rgba(181,68,43,.75);border-radius:12px;pointer-events:none}
+#sandbox{position:absolute;left:50%;top:auto;bottom:calc(6px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);opacity:.8;font-size:11px!important;padding:3px 12px;font-size:13px;color:#fff7de;background:rgba(181,68,43,.75);border-radius:12px;pointer-events:none}
 
 #letterbox .bar{position:absolute;left:0;right:0;height:0;background:#0d0a07;transition:height 1.1s cubic-bezier(.6,0,.2,1);pointer-events:none}
 #letterbox .top{top:0}
@@ -354,6 +354,10 @@ body.photo #hud{display:none}
 #tMend{right:122px;bottom:176px;width:56px;height:56px;font-size:20px}
 #tJump{right:186px;bottom:40px;width:56px;height:56px}
 body.touchUI #hint,body.touchUI #lookHint,body.touchUI #satchel{display:none!important}
+#cbReticle{position:absolute;left:50%;top:50%;width:34px;height:34px;margin:-17px 0 0 -17px;border:2px solid rgba(255,248,230,.8);border-radius:50%;box-shadow:0 0 0 1px rgba(0,0,0,.25)}
+#cbReticle::after{content:"";position:absolute;left:50%;top:50%;width:4px;height:4px;margin:-2px 0 0 -2px;border-radius:50%;background:#fff6e2}
+#cbReticle.lock{border-color:#ffc860;box-shadow:0 0 10px #ffb84a;transform:scale(.8)}
+#tSling{right:200px;bottom:118px;width:56px;height:56px}
 </style>
 
 </head>
@@ -488,11 +492,12 @@ body.touchUI #hint,body.touchUI #lookHint,body.touchUI #satchel{display:none!imp
         </div>
         <div class="page">
           <div class="news" id="jNews">
-            <h2>What's new · v9</h2>
+            <h2>What's new · v12</h2>
             <ul>
-              <li>Something in the valley is remembering. A new journal tab, Pieces, keeps what you find, with a page for your own theories.</li>
-              <li>Have a look in your satchel. You've had that basket a long time.</li>
-              <li>At night, keep an eye on the far shore.</li>
+              <li>The valley fights back now. A mending staff, a dodge, and the heron lantern against the stillwater blight. (Gentle mode is under Valley &amp; settings.)</li>
+              <li>The Old Koi waits in the outlet gate. Already past him? Visit the outlet at dawn.</li>
+              <li>Chapter 1, the Old Orchard: a seed sling on the gatepost, thorn-knots, and something wound around the last old tree.</li>
+              <li>Three places in the orchard are hidden. Some small friends may help you find them.</li>
             </ul>
           </div>
           <h2>Today's three small things</h2>
@@ -586,7 +591,7 @@ body.touchUI #hint,body.touchUI #lookHint,body.touchUI #satchel{display:none!imp
 
   <div id="title">
     <div class="title-inner">
-      <p class="title-kicker">A cozy restoration</p>
+      <p class="title-kicker">A river adventure</p>
       <h1>Mizumend</h1>
       <p class="title-sub">Rebuild the Valley</p>
       <div class="title-actions">
