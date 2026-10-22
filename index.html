@@ -308,6 +308,13 @@ body.photo #hud{display:none}
 .scrap-strip{display:flex;gap:6px;margin-top:6px}.scrap-strip figure{margin:0;width:22%}.scrap-strip span{font-size:11px;color:var(--ink-soft)}
 .scrap-pins{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}.scrap-pins figure{margin:0;position:relative}
 .scrap-pins button{position:absolute;top:6px;right:6px;border:0;border-radius:50%;width:22px;height:22px;background:rgba(42,32,23,.65);color:#fff;cursor:pointer;font-size:13px;line-height:22px;padding:0}
+.pieces{list-style:none;padding:0;margin:6px 0}.pieces li{margin:0 0 10px;padding:0 0 8px;border-bottom:1px dashed rgba(92,72,52,.22)}
+.pieces b{font-weight:normal;font-size:17px;display:block}.pieces small{font-family:var(--f-hand);color:var(--ink-soft);font-size:13px}.pieces p{margin:2px 0 0;font-size:14px;line-height:1.4}
+.pieces li.new b::after{content:" · new";font-family:var(--f-hand);color:#b5442b;font-size:13px}.pieces li.unk{opacity:.5}
+.hand{font-family:var(--f-hand);font-size:16px;line-height:1.45;color:#3a2c20}
+.theories{list-style:none;padding:0;margin:4px 0}.theories li{font-family:var(--f-hand);font-size:16px;line-height:1.35;padding:6px 8px;margin:4px 0;border-radius:18px;cursor:pointer;border:2px solid transparent}
+.theories li.pick{border-color:#b5442b}.theories li .tally{display:block;font-size:13px;color:var(--ink-soft)}
+#pcEnd{margin-top:12px}#pcEnd p{font-size:15px;line-height:1.5}
 </style>
 
 </head>
@@ -342,6 +349,7 @@ body.photo #hud{display:none}
         <li id="slotStone"><svg viewBox="0 0 26 22" aria-hidden="true"><path d="M4 15 C3 10 8 6 13 6.5 C19 7 23 10 22 14.5 C21 18 15 18.5 11 18 C7 17.6 4.6 17.2 4 15 Z"/><path d="M9 11 C10 10 12 9.6 13.5 10"/></svg><span>Stone</span><b id="invStone">0</b></li>
         <li id="slotReed"><svg viewBox="0 0 26 22" aria-hidden="true"><path d="M13 21 L13 4"/><rect x="11.3" y="5" width="3.4" height="7" rx="1.7"/><path d="M13 20 C9 15 8 10 6 6"/><path d="M13 20 C17 14 19 11 21 8"/></svg><span>Reeds</span><b id="invReed">0</b></li>
         <li id="slotCrop" hidden><svg viewBox="0 0 26 22" aria-hidden="true"><ellipse cx="13" cy="14" rx="8" ry="5.5"/><path d="M13 8.5 C13 6 14 4.5 16 4"/></svg><span>Produce</span><b id="invCrop">0</b></li>
+        <li id="slotBasket" title="Your old basket. Open the journal's Pieces tab to look at it."><svg viewBox="0 0 26 22" aria-hidden="true"><path d="M4 9 H22 L19 19 H7 Z"/><path d="M7 9 C7 3 19 3 19 9" fill="none"/></svg><span>Old basket</span><b>1</b></li>
         <li id="slotCut"><svg viewBox="0 0 26 22" aria-hidden="true"><path d="M5 19 L18 6"/><path d="M12 12 C14 9 18 9 20 10 C18 13 15 14 12 12Z"/><path d="M9 15 C7 12 8 9 10 8 C11 11 11 13 9 15Z"/></svg><span>Apple cuttings</span><b id="invCut">0</b></li>
       </ul>
     </section>
@@ -420,6 +428,7 @@ body.photo #hud{display:none}
       <nav class="jtabs" role="tablist" aria-label="Journal sections">
         <button class="jtab" role="tab" type="button" data-pane="pJournal" aria-selected="true">Journal</button>
         <button class="jtab" role="tab" type="button" data-pane="pCol" aria-selected="false">Collections <small id="colCount"></small></button>
+        <button class="jtab" role="tab" type="button" data-pane="pPieces" aria-selected="false">Pieces <small id="piecesNew"></small></button>
         <button class="jtab" role="tab" type="button" data-pane="pScrap" aria-selected="false">Scrapbook</button>
         <button class="jtab" role="tab" type="button" data-pane="pValley" aria-selected="false">Valley &amp; settings</button>
       </nav>
@@ -440,12 +449,11 @@ body.photo #hud{display:none}
         </div>
         <div class="page">
           <div class="news" id="jNews">
-            <h2>What's new · v8</h2>
+            <h2>What's new · v9</h2>
             <ul>
-              <li>A "Then and now" scrapbook (journal → Scrapbook): each place is photographed before you start and again at 25%, 50% and 100% restored. Pin your own photos from the camera too.</li>
-              <li>Warmer nights: glowing windows and lanterns light the ground, fireflies drift by the cottage and the press, and the moon lays a path across the pond.</li>
-              <li>Winter ice you can see from the shore, cracks and sheen and all, with a "Slide" prompt at the edge.</li>
-              <li>Distant trees have light tops and shaded undersides now.</li>
+              <li>Something in the valley is remembering. A new journal tab, Pieces, keeps what you find, with a page for your own theories.</li>
+              <li>Have a look in your satchel. You've had that basket a long time.</li>
+              <li>At night, keep an eye on the far shore.</li>
             </ul>
           </div>
           <h2>Today's three small things</h2>
@@ -467,6 +475,22 @@ body.photo #hud{display:none}
         <div class="colhead"><h2>Collections · <span id="colFound">0 of 26</span></h2><div class="row" id="colFilter" style="margin:0"></div></div>
         <div class="colgrid" id="colGrid"></div>
         <p class="qnote" style="margin-top:8px">Fish are caught with a line (hold E by rippling water). Everything else is sketched: look for a soft sparkle in the meadow, on the shore and in the trees, then hold E. Some only appear in certain seasons, weather or hours.</p>
+      </section>
+      <section class="jpane two" id="pPieces" role="tabpanel" hidden>
+        <div class="page">
+          <h2>Pieces</h2>
+          <p class="qnote">Things you have found. They don't explain themselves.</p>
+          <ol id="pcList" class="pieces"></ol>
+        </div>
+        <div class="page">
+          <h2>Your old basket</h2>
+          <p id="pcBasket" class="hand"></p>
+          <div id="pcGate" hidden><h2 class="sp">What happened at the gate</h2><p class="hand">Someone turned the sluice by hand that night, the ninth of the rains, with the river at the door. The bell on the hill rang too late. The water went through the mill pond instead of the village below, and the village was spared.</p><p class="hand">So that is what happened at the gate. But the notes in the bottles are still written to a small one. Whose?</p></div>
+          <h2 class="sp">Theories</h2>
+          <p class="qnote">Tap the one you believe. Nothing is lost by changing your mind.</p>
+          <ul id="pcTheories" class="theories"></ul>
+          <div id="pcEnd" hidden></div>
+        </div>
       </section>
       <section class="jpane one" id="pScrap" role="tabpanel" hidden>
         <div class="colhead"><h2>Then and now</h2></div>
@@ -2377,7 +2401,7 @@ function setMuted(m){AU.muted=m;if(AU.master&&AU.ctx)AU.master.gain.setTargetAtT
 const SAVE_KEY='rebuild-the-valley:mill-pond:v1';
 const S={hours:8.5,inv:{wood:0,stone:0,reed:0,cut:0},sight:{butterflies:false,ducks:false,birds:false,fireflies:false,fish:false},errands:{},muted:false,
   lastDay:null,visitDays:0,daily:null,gifts:[],keepsakes:[],col:{},notes:[],cosmetics:{},wearing:'straw',gameDay:0,cutTaken:0,decor:[],stored:{},
-  home:0,plots:null,crops:{},ciders:{},earned:{},gather:{},reed:{bw:[false,false,false,false,false],cut:[],woven:{},floated:false},news:0,harvests:0,photos:0,applePick:{}};
+  home:0,plots:null,crops:{},ciders:{},earned:{},gather:{},reed:{bw:[false,false,false,false,false],cut:[],woven:{},floated:false},news:0,story:null,harvests:0,photos:0,applePick:{}};
 function stage(){if(!piles.every(p=>p.cleared))return 0;if(!sluice.built)return 1;if(!SPOTS.every(s=>s.planted))return 2;return 3;}
 function oStage(){if(stage()<3)return -1;if(!brambles.every(b=>b.cleared))return 0;if(!chanSegs.every(c=>c.fixedOK))return 1;if(!stumps.every(s=>s.planted))return 2;if(!press.fixedOK)return 3;return 4;}
 function restorationPct(){const p=piles.filter(x=>x.cleared).length*5;const s=sluice.built?35:0;const r=SPOTS.filter(x=>x.planted).length*4.375;return Math.round(p+s+r);}
@@ -2408,7 +2432,7 @@ function serialize(){
     brambles:brambles.map(b=>b.cleared),heaps:stoneHeaps.map(h=>h.left),chan:chanSegs.map(c=>c.fixedOK),stumps:stumps.map(s=>s.planted),
     lastDay:S.lastDay,visitDays:S.visitDays,daily:S.daily,gifts:S.gifts,keepsakes:S.keepsakes,col:S.col,notes:S.notes,cosmetics:S.cosmetics,wearing:S.wearing,gameDay:S.gameDay,cutTaken:S.cutTaken,
     press:press.fixedOK,oda:{met:oda.met,lastDay:oda.lastDay},decor:S.decor,stored:S.stored,
-    home:S.home,plots:S.plots,crops:S.crops,ciders:S.ciders,earned:S.earned,gather:S.gather,reed:S.reed,harvests:S.harvests,photos:S.photos,applePick:S.applePick,mira:{met:mira.met,lastDay:mira.lastDay},news:S.news};
+    home:S.home,plots:S.plots,crops:S.crops,ciders:S.ciders,earned:S.earned,gather:S.gather,reed:S.reed,harvests:S.harvests,photos:S.photos,applePick:S.applePick,mira:{met:mira.met,lastDay:mira.lastDay},news:S.news,story:S.story};
 }
 function writeSave(){if(sandbox)return;try{localStorage.setItem(SAVE_KEY,JSON.stringify(serialize()));}catch(e){}}
 function validSave(d){return !!(d&&typeof d==='object'&&(d.v===1||d.v===2||d.v===3||d.v===4));}
@@ -2461,6 +2485,8 @@ function applySave(d){
   if(d.reed&&typeof d.reed==='object'){if(Array.isArray(d.reed.bw)&&d.reed.bw.length===5)S.reed.bw=d.reed.bw.map(Boolean);if(Array.isArray(d.reed.cut))S.reed.cut=d.reed.cut.slice(0,6).map(v=>Number.isFinite(v)?v|0:-1);
     S.reed.woven={};if(d.reed.woven&&typeof d.reed.woven==='object')for(const k of ['basket','mat','boat'])if(d.reed.woven[k])S.reed.woven[k]=true;S.reed.floated=!!d.reed.floated;}
   S.news=Number.isFinite(d.news)?d.news|0:0;
+  S.story=null;if(d.story&&typeof d.story==='object'){const t=d.story;S.story={f:{},seen:{},gate:!!t.gate,done:!!t.done,gc:!!t.gc,fest:Number.isFinite(t.fest)?t.fest|0:-1,pick:['a','b','c'].includes(t.pick)?t.pick:null};
+    if(t.f&&typeof t.f==='object')for(const k of Object.keys(t.f))if(PIECE_BY_ID[k]&&t.f[k])S.story.f[k]=Number(t.f[k])||1;if(t.seen&&typeof t.seen==='object')for(const k of Object.keys(t.seen))S.story.seen[k]=!!t.seen[k];}
   if(d.mira&&typeof d.mira==='object'){const m=num(d.mira.met,0,3),l=num(d.mira.lastDay,-1,1e7);if(m!==null)mira.met=m|0;if(l!==null)mira.lastDay=Math.floor(l);}
   if(d.stored&&typeof d.stored==='object')for(const k in d.stored){if(DECOR_BY_ID[k]){const v=num(d.stored[k],0,99);if(v!==null)S.stored[k]=v|0;}}
 }
@@ -2547,6 +2573,7 @@ function primaryTargets(){
         else{if(S.inv.reed>=2&&S.inv.wood>=1)boardwalk.forEach(b=>{if(!S.reed.bw[b.i])out.push({x:b.x,z:b.z,label:"Mend the reed-weaver's boardwalk",r:1.5});});
           if(S.inv.reed<2)RCLUMPS.forEach(c=>{if(reedAvail(c.i))out.push({x:c.x,z:c.z,label:'Cut reeds by the stream',r:1.3});});
           if(S.inv.wood<1)GATHER.forEach(G3=>{if(G3.type==='wood'&&gatherAvail(G3))out.push({x:G3.x,z:G3.z,label:'Gather fallen branches for wood',r:1.2});});}}
+      else if(S.story&&S.story.gate&&!S.story.done)out.push({x:lsW(-0.2,4.2).x,z:lsW(-0.2,4.2).z,label:'Cross to the lit house on the far shore',r:1.6});
       else if(rs>=1&&boatRun)out.push({x:boatRun.x,z:boatRun.z,label:'Follow the reed boat down to Mill Pond',r:1.4});
       else if(rs>=1&&!S.reed.floated&&rbDist(player.pos.x,player.pos.z)<34){const w=nextWeave();
         if(!w)out.push({x:WEAVE.lx,z:WEAVE.lz,label:'Set the reed boat on the stream',r:1.4});
@@ -2648,6 +2675,7 @@ const PROJECTS_H=[
 const PROJECTS_R=[{t:"Mend the reed-weaver's boardwalk",sub:()=>`${S.reed.bw.filter(Boolean).length} of 5 stretches mended · 1 wood and 2 reeds each`}];
 let jPane='pJournal';
 function renderJournal(){
+  try{const n=PIECES.filter(p=>hasPiece(p.id)&&!S.story.seen[p.id]).length;$('piecesNew').textContent=n?`· ${n} new`:'';}catch(e){}
   $('jPct').textContent=restorationPct()+'%';
   $('jSeason').textContent=seasonLine().toLowerCase();
   $('jProjects').innerHTML=projectList(PROJECTS,stage());
@@ -2667,7 +2695,7 @@ function renderJournal(){
   $('btnDebug').textContent=$('debug').hidden?'Test panel: off':'Test panel: on';
 }
 function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function showPane(id){jPane=id;for(const b of document.querySelectorAll('.jtab'))b.setAttribute('aria-selected',String(b.dataset.pane===id));for(const pid of ['pJournal','pCol','pScrap','pValley'])$(pid).hidden=pid!==id;if(id==='pValley')renderValleyPane(true);if(id==='pScrap')renderScrap();}
+function showPane(id){jPane=id;for(const b of document.querySelectorAll('.jtab'))b.setAttribute('aria-selected',String(b.dataset.pane===id));for(const pid of ['pJournal','pPieces','pCol','pScrap','pValley'])$(pid).hidden=pid!==id;if(id==='pValley')renderValleyPane(true);if(id==='pScrap')renderScrap();if(id==='pPieces')renderPieces(true);}
 document.querySelector('.jtabs').addEventListener('click',(e)=>{const b=e.target.closest('.jtab');if(b){showPane(b.dataset.pane);SFX.page();}});
 const HUD_KEY='rebuild-the-valley:hud';
 let hudMode=(()=>{try{const v=localStorage.getItem(HUD_KEY);if(['compact','expanded','hidden'].includes(v))return v;}catch(e){}return 'compact';})();
@@ -3115,18 +3143,18 @@ function dailyCheck(dt){
   for(const k in c){if(c[k]){dHold[k]=(dHold[k]||0)+dt;if(dHold[k]>2){dHold[k]=-999;dailyEvent(k);}}else dHold[k]=0;}
 }
 const NOTES=[
-  'To whoever finds this: the mill wheel turned for ninety years. Keep it turning. — R.',
-  'The ducks always come back. They only wait for the reeds.',
-  'Grandmother planted the orchard the year the river first flooded. She said apple trees remember.',
-  'If you hear bells in the grass at night, that is the crickets. Mind where you step.',
-  'Under the camphor is the coolest place in the valley. We tied a rope round it for luck.',
-  'The pike lives under the sluice at dusk. Nobody has ever caught him. Maybe you will.',
-  'Somewhere upstream there is a village. We will meet again when the bridges are mended.',
-  'In autumn the spider lilies come up overnight along the water, red as lanterns.',
-  'Eels only bite after dark. Bring a lamp and patience.',
-  'Every stone in the orchard wall was carried up from the stream by hand.',
-  'Before the flood we put the koi in the pond for safekeeping. Are they still there?',
-  'Thank you for coming back.'
+  'My small one. The water is going down at last. I can see the third step of the mill again.',
+  'The ducks came back this spring. You would have chased them. Everyone chases them at first.',
+  'The plums came early. You would have liked the plums.',
+  'If you hear bells in the grass at night, that is only the crickets. Mind where you step.',
+  'It is the ninth again. I sent the boat down at dusk, the way I always do.',
+  'The pike still lives under the sluice at dusk. Nobody has ever caught him. Maybe you would have.',
+  'Somebody is mending the bridges. I watch from the window and do not let myself hope.',
+  'The spider lilies came up overnight along the water, red as lanterns. I thought of you.',
+  'Eels only bite after dark. Your father knew that. Bring a lamp and patience.',
+  'I still weave a little each evening. My hands are slower. The knots are the same.',
+  'The koi are still in the pond. I put them there for safekeeping the night of the rains.',
+  'Thank you for coming back. I say it every year, to the water, in case.'
 ];
 const giftPool=[];
 for(let i=0;i<12;i++){
@@ -3169,7 +3197,7 @@ function pickGift(i){
   const d=S.gifts[i];if(!d)return;S.gifts.splice(i,1);
   if(d.type==='drift'){S.inv.wood++;toast('+1 driftwood');}
   else if(d.type==='stone'){S.inv.stone++;toast('+1 smooth stone');}
-  else{let idx=0;while(S.notes.includes(idx)&&idx<NOTES.length)idx++;if(idx<NOTES.length){S.notes.push(idx);showCatch({kicker:'A note in a bottle',name:'',note:`“${NOTES[idx]}”`,dur:6000});}}
+  else{let idx=0;while(S.notes.includes(idx)&&idx<NOTES.length)idx++;if(idx<NOTES.length){S.notes.push(idx);showCatch({kicker:'A note in a bottle',name:'',note:`“${NOTES[idx]}”`,dur:6000});after(6.5,()=>piece('notes'));}}
   SFX.get();sparkle(d.x,groundH(d.x,d.z)+0.3,d.z,8);layoutGifts();dailyEvent('gift');writeSave();
 }
 function giftVisuals(dt){
@@ -3319,6 +3347,19 @@ function renderScrap(){
   const pins=scrap.data.pins;$('scrapPinN').textContent=`${pins.length} of ${SCRAP_PIN_MAX}`;
   $('scrapPins').innerHTML=pins.length?pins.map((e,i)=>`<figure><img alt="Pinned photo, ${escA(e.cap)}" src="${e.img}"><figcaption>${escA(e.cap)} · ${escA(e.d)}</figcaption><button type="button" data-unpin="${i}" aria-label="Remove this photo">×</button></figure>`).join(''):'<p class="qnote">Take a photo (P), then choose "Pin to scrapbook".</p>';
 }
+function renderPieces(mark){
+  storyInit();const st=S.story;const found=PIECES.filter(p=>hasPiece(p.id)).sort((a,b)=>(st.f[a.id]-st.f[b.id])||PIECES.indexOf(a)-PIECES.indexOf(b));
+  const extra=st.done?[{id:'ren',t:rim().ren[0],w:'Lamplight Shore',x:rim().ren[1]}]:[];
+  $('pcList').innerHTML=found.concat(extra).map(p=>`<li class="${st.seen[p.id]?'':'new'}"><b>${escA(p.t)}</b><small>${escA(p.w)}</small><p>${escA(p.x)}</p></li>`).join('')+(found.length<PIECES.length?`<li class="unk"><small>${PIECES.length-found.length} more somewhere in the valley…</small></li>`:'');
+  $('pcBasket').textContent=st.done?rim().rim:"You've had it as long as you can remember. Lopsided, but sturdy. Something is worked into the rim, too worn to make out.";
+  $('pcGate').hidden=!st.gc;
+  const tags=k=>found.filter(p=>p.g.includes(k)).length;
+  $('pcTheories').innerHTML=THEORIES.map(T=>`<li data-th="${T.k}" class="${st.pick===T.k?'pick':''}">${escA(T.t)}<span class="tally">${'| '.repeat(tags(T.k))||'no pieces yet'}</span></li>`).join('')+(st.gc?'<li data-th="" style="cursor:default">And who was the small one?</li>':'');
+  const E=$('pcEnd');E.hidden=!st.done;if(st.done){const R=rim();E.innerHTML=`<h2 class="sp">${escA(R.page[0])}</h2>${R.page.slice(1).map(x=>`<p class="hand">${escA(x)}</p>`).join('')}<p class="hand"><i>${escA(R.theory)}</i></p>`;}
+  if(mark){for(const p of found)st.seen[p.id]=true;if(st.done)st.seen.ren=true;writeSave();$('piecesNew').textContent='';}
+}
+$('pcTheories').addEventListener('click',e=>{const li=e.target.closest('[data-th]');if(!li||!li.dataset.th)return;storyInit();S.story.pick=S.story.pick===li.dataset.th?null:li.dataset.th;writeSave();renderPieces();SFX.page();});
+$('slotBasket').addEventListener('click',()=>setJournal(true,'pPieces'));
 $('scrapPins').addEventListener('click',e=>{const b=e.target.closest('[data-unpin]');if(!b)return;scrap.data.pins.splice(+b.dataset.unpin,1);scrapWrite();renderScrap();});
 $('shotPin').addEventListener('click',()=>scrapPin());
 
@@ -3448,11 +3489,11 @@ function odaPose(t,dt){
 const ODA_VISITS=[
   ["Oh. So it's true. The water's back in the channel.","I'm Oda. I kept this press for forty-one autumns, until the river came up and took the lower rows.","I didn't think I'd find the trees again. My knees told me not to come up the lane. I came anyway.","Here. I wrote this before I knew who would read it."],
   ["Morning. I slept in the mill house, if that's all right. It smells the same as it did.","The young trees are doing well. Don't let them fruit too hard the first year. They wear themselves out.","This one is mostly about apples. You can skip the dull parts."],
-  ["I pressed a little this morning. Only a little. The old screw still sticks in the cold.","There. Taste that. That's what this hill tastes like.","And the barrel. I've no use for two. Put it somewhere it'll be looked at."]
+  ["I pressed a little this morning. Only a little. The old screw still sticks in the cold.","There. Taste that. That's what this hill tastes like.","Her lamp was the only light that night. She was out on the gate, shouting over the water. I'll not say more than that.","And the barrel. I've no use for two. Put it somewhere it'll be looked at."]
 ];
 const ODA_LETTERS=[
   "To whoever is mending the valley. I left the year the water reached the third step of the mill. I told myself it was for one season. It was eleven. The press screw sticks in the cold; tap it twice on the left and it remembers. — K. Oda",
-  "My wife used to say the old variety was too sour to eat and too good to waste. We filled forty jars the last good year. I have written the measures on the back of this, in case my hands forget before my head does.",
+  "My wife used to say the old variety was too sour to eat and too good to waste. We filled forty jars the last good year. I have written the measures on the back of this, in case my hands forget before my head does. P.S. I was meant to be on the hill that night, with the bell. I wasn't fast enough. I have never been fast enough since.",
   "I am not good at saying thank you, so I will write it. When I came up the lane and heard the channel running, I had to sit on the wall for a while. Keep the first jar. It is yours by rights."
 ];
 function odaChat(){
@@ -3463,6 +3504,7 @@ function odaChat(){
   if(SEASON==='autumn')L.push("Pick from the sunny side first. They're sweeter.");
   if(SEASON==='spring')L.push("Blossom's early. Let's hope the frost forgets about us.");
   if(S.decor.length)L.push("I saw what you've done with the mill yard. It looks lived in again.");
+  if(S.story&&S.story.done)L.push(...rim().oda2);
   return L[(S.gameDay+Math.floor(simTime/40))%L.length];
 }
 function odaVisitReady(){return oda.state==='home'&&oda.met<3&&(oda.met===0||S.gameDay>oda.lastDay);}
@@ -3470,7 +3512,7 @@ const talk={on:false,lines:[],i:0,onEnd:null,who:'oda'};
 function talkStart(){
   if(oda.state!=='home'||talk.on)return;
   if(odaVisitReady()){const k=oda.met;talk.lines=ODA_VISITS[k].slice();talk.onEnd=()=>{
-      oda.met=k+1;oda.lastDay=S.gameDay;
+      oda.met=k+1;oda.lastDay=S.gameDay;if(k===1)after(9,()=>piece('bell'));if(k===2)after(9,()=>piece('gatelight'));
       showCatch({kicker:'A letter from Mr. Oda · kept in your journal',name:'',note:`“${ODA_LETTERS[k]}”`,dur:8000});
       if(k===2){const kp='First-press cider · from Mr. Oda';if(!S.keepsakes.includes(kp))S.keepsakes.push(kp);S.stored.barrel=(S.stored.barrel||0)+1;after(1.2,()=>toast('Mr. Oda gave you a cider barrel. Press B to place it.'));}
       else after(1.2,()=>toast('Come back tomorrow, in the valley. He likes to take things slowly.'));
@@ -3479,10 +3521,10 @@ function talkStart(){
   talk.who='oda';talk.on=true;talk.i=0;oda.nod=0.8;$('talk').hidden=false;$('talkWho').textContent='Mr. Oda';$('talkLine').textContent=talk.lines[0];SFX.page();dailyEvent('oda');
   if(document.pointerLockElement)document.exitPointerLock();
 }
-function talkNext(){talk.i++;if(talk.i>=talk.lines.length){talkEnd();return;}$('talkLine').textContent=talk.lines[talk.i];oda.nod=0.6;SFX.rustle();}
+function talkNext(){talk.i++;if(talk.i>=talk.lines.length){talkEnd();return;}$('talkLine').textContent=talk.lines[talk.i];oda.nod=0.6;if(talk.who==='sachi')sachi.nod=0.6;SFX.rustle();}
 function talkEnd(){if(!talk.on)return;talk.on=false;$('talk').hidden=true;const f=talk.onEnd;talk.onEnd=null;if(f)f();canvas.focus({preventScroll:true});}
 $('talk').addEventListener('click',()=>talkNext());
-function renderLetters(){const nm=mira.met;$('jLettersMH').hidden=nm===0;$('jLettersM').hidden=nm===0;$('jLettersM').innerHTML=MIRA_LETTERS.slice(0,nm).map(t=>`<li>${escapeHTML(t)}</li>`).join('');const n=oda.met;$('jLettersH').hidden=n===0;$('jLetters').hidden=n===0;$('jLetters').innerHTML=ODA_LETTERS.slice(0,n).map(t=>`<li>${escapeHTML(t)}</li>`).join('');}
+function renderLetters(){const nm=mira.met;$('jLettersMH').hidden=nm===0;$('jLettersM').hidden=nm===0;$('jLettersM').innerHTML=MIRA_LETTERS.slice(0,nm).map(t=>`<li>${escapeHTML(t)}</li>`).join('');const n=oda.met;$('jLettersH').hidden=n===0;$('jLetters').hidden=n===0;$('jLetters').innerHTML=ODA_LETTERS.slice(0,n).concat(S.story&&S.story.done?[rim().oda]:[]).map(t=>`<li>${escapeHTML(t)}</li>`).join('');}
 
 /* ================================================================
    Cozy decor for the mill yard: craft, place, turn, pick up again
@@ -3713,10 +3755,12 @@ const home=(()=>{
     { const w=new THREE.Mesh(new THREE.BoxGeometry(0.9,0.8,0.36),glass);w.position.set(1.95,1.55,-HZ);walls.add(w);boxM(1.04,0.08,0.4,0xd9c39a,walls,1.95,1.98,-HZ);boxM(1.1,0.08,0.42,0xd9c39a,walls,1.95,1.12,-HZ);winDeco(1.95,-HZ,false); }
     for(let k=0;k<5;k++)for(let j=0;j<4-(k>2?1:0);j++){const l=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,1.1,7).rotateX(Math.PI/2),makeToon(j%2?0x8a6440:0x9c7550,{}));l.position.set(-HX-0.55-j*0.25,0.4+k*0.23,1.0+(k%2)*0.12);l.castShadow=true;walls.add(l);}
   }
+  for(let k=0;k<9;k++)boxM(0.07,0.012,0.012,0x2a2420,walls,-0.86,0.25+0.85+k*0.13,-HZ-0.17,0);boxM(0.07,0.012,0.012,0x2a2420,walls,-0.74,0.25+0.58,-HZ-0.17,0);
   const door=new THREE.Group();door.position.set(-0.6,0.25,-HZ);walls.add(door);boxM(1.1,2.0,0.08,0x7a5030,door,0.55,1.0,0,0.01);door.rotation.y=-1.25;
   boxM(1.7,1.1,0.7,0x8f8574,hearth,0,0.8,HZ-0.5,0.015);
   const fireBox=new THREE.Mesh(new THREE.BoxGeometry(0.8,0.55,0.12),makeToon(0x1e140c,{noHeal:true}));fireBox.position.set(0,0.62,HZ-0.86);hearth.add(fireBox);
   boxM(1.9,0.14,0.85,0x7d7568,hearth,0,1.4,HZ-0.5,0.01);
+  { const H2=0x2a2420;boxM(0.04,0.5,0.04,H2,hearth,0.32,1.18,HZ-0.78);boxM(0.04,0.3,0.04,H2,hearth,0.32,1.48,HZ-0.78,0,0,0,-0.6);boxM(0.14,0.035,0.03,H2,hearth,0.4,1.58,HZ-0.78,0,0,0,0.15);boxM(0.18,0.08,0.06,H2,hearth,0.25,1.05,HZ-0.78);boxM(0.025,0.25,0.025,H2,hearth,0.05,0.85,HZ-0.78,0,0,0,0.4); }
   boxM(0.9,4.6,0.8,0x8a8070,hearth,0,2.6,HZ+0.42,0.02);
   const fireMat=new THREE.MeshBasicMaterial({color:new THREE.Color(2.4,1.1,0.35),transparent:true,opacity:0.95,blending:THREE.AdditiveBlending,depthWrite:false});
   const fire=new THREE.Group();fire.position.set(0,0.42,HZ-0.78);hearth.add(fire);
@@ -3743,7 +3787,7 @@ function buildHomeStep(){
   const n=hStage()+1;const st=HOME_STEPS[n];if(!st||homeBusy)return;homeBusy=true;
   for(const [k,v] of Object.entries(st.cost))S.inv[k]-=v;toast(`-${costText(st.cost)}`);SFX.page();for(let i=0;i<8;i++)SFX.knock(0.2+i*0.28,rr(170,260));
   const c=homeW(0,0);puff(c.x,HOME_H+1.2,c.z,26,new THREE.Color(0.66,0.6,0.5),0.5);
-  after(2.4,()=>{homeBusy=false;setHomeStage(n);sparkle(c.x,HOME_H+2,c.z,24);auSwell();player.happy=5;showCardBrief(st.card);
+  after(2.4,()=>{homeBusy=false;setHomeStage(n);after(5,()=>piece(['','mobile','marks','hook'][n]));sparkle(c.x,HOME_H+2,c.z,24);auSwell();player.happy=5;showCardBrief(st.card);
     if(n===3){grantFurniture('bed',true);if(!S.decor.some(e=>e.id==='bed')){const w=homeW(2.0,1.2);S.decor.push({id:'bed',x:w.x,z:w.z,ry:HOME.ry+Math.PI/2});S.stored.bed=Math.max(0,(S.stored.bed||0)-1);layoutDecor();}}
     hud.tasksHTML='';writeSave();});
 }
@@ -3952,7 +3996,7 @@ function mendBoardwalk(b){
   else writeSave();
 }
 function reedbedVisuals(t,dt){
-  fallsVisuals(dt);
+  fallsVisuals(dt);lamplightVisuals(t,dt);
   if(dt>0&&waterU.uIceN.value>0.6&&nightF<0.6&&rnd()<dt*9){const a2=rnd()*6.28,r2=rr(4,POND_R-2);const x=Math.cos(a2)*r2,z=Math.sin(a2)*r2;
     if(levelCur-groundH(x,z)>0.15){tmpCol.setRGB(2.2,2.3,2.5);fxGlow.emit(x,levelCur+0.15,z,0,rr(0.05,0.2),0,tmpCol,rr(0.1,0.18),rr(0.6,1.2),0,0.5,0);}}
   reedBoatStep(t,dt);
@@ -3997,7 +4041,7 @@ function miraPose(t,dt){
 }
 const MIRA_VISITS=[
   ["Shh. He's been standing there since breakfast.","The heron. He only fishes where the water's clean. He came back the week the boardwalk did.","I'm Mira. I weave baskets from the reeds, like my grandmother. She lived down by the pond, before.","Here. I wrote it last night. It's not very good."],
-  ["You're back. He caught two fish this morning. I counted.","Grandmother says you cut reeds after the first frost, never before. I don't know why. She just says it.","I wrote another one. It's mostly about the heron again."],
+  ["You're back. He caught two fish this morning. I counted.","Grandmother says you cut reeds after the first frost, never before. I don't know why. She just says it.","Every family has its own turn in the weave, she says. Hers goes under the rim, where nobody looks.","I wrote another one. It's mostly about the heron again."],
   ["I finished it. Your basket. It took me four evenings.","You can keep apples in it. Or nothing. Grandmother keeps nothing in hers. She just likes looking at it.","And this. It's a feather he dropped. I've got three already."]
 ];
 const MIRA_LETTERS=[
@@ -4007,11 +4051,12 @@ const MIRA_LETTERS=[
 ];
 function miraChat(){const L=["He hasn't moved. I timed it.","If you stand still long enough the reed warblers forget you're there.","The water's louder up here. Grandmother says it's because it's in a hurry."];
   if(W.type==='rain')L.push("He doesn't mind the rain. I mind it a bit.");if(SEASON==='winter')L.push("The stream doesn't freeze up here. It's too quick.");if(nightF>0.6)L.push("I'm going home soon. Grandmother leaves the lamp on.");
+  if(S.story&&S.story.done)L.push(...rim().mira);
   return L[(S.gameDay+Math.floor(simTime/40))%L.length];}
 function miraVisitReady(){return mira.state==='home'&&mira.met<3&&(mira.met===0||S.gameDay>mira.lastDay);}
 function miraTalk(){
   if(mira.state!=='home'||talk.on)return;
-  if(miraVisitReady()){const k=mira.met;talk.lines=MIRA_VISITS[k].slice();talk.onEnd=()=>{mira.met=k+1;mira.lastDay=S.gameDay;
+  if(miraVisitReady()){const k=mira.met;talk.lines=MIRA_VISITS[k].slice();talk.onEnd=()=>{mira.met=k+1;mira.lastDay=S.gameDay;if(k===1)after(9,()=>piece('weave'));
       showCatch({kicker:'A letter from Mira · kept in your journal',name:'',note:`“${MIRA_LETTERS[k]}”`,dur:8000});
       if(k===2){const kp='Heron feather · from Mira';if(!S.keepsakes.includes(kp))S.keepsakes.push(kp);grantFurniture('basket');}
       else after(1.2,()=>toast('She will be here tomorrow, in the valley. The heron keeps her hours.'));hud.tasksHTML='';writeSave();};}
@@ -4065,7 +4110,7 @@ function weaveNext(){
   SFX.rustle();SFX.page();for(let i=0;i<6;i++)SFX.knock(0.2+i*0.3,rr(320,420));player.busy=Math.max(player.busy,1.6);
   after(1.8,()=>{S.reed.woven[w.id]=true;syncWeave();sparkle(WEAVE.x,groundH(WEAVE.x,WEAVE.z)+1,WEAVE.z,18);auSwell();player.happy=4;showCardBrief(w.card);
     if(w.furn)grantFurniture(w.furn);
-    if(w.id==='boat')after(4.8,()=>toast('Set the boat on the stream when you are ready. It knows the way down.'));
+    if(w.id==='boat'){after(4.8,()=>toast('Set the boat on the stream when you are ready. It knows the way down.'));after(8,()=>piece('boats'));}
     hud.tasksHTML='';writeSave();});
 }
 function launchBoat(){
@@ -4093,6 +4138,127 @@ function reedBoatStep(t,dt){
     else{const k=ease(clamp(r.t/12,0,1));r.x=lerp(r.fx,BOAT_REST.x,k);r.z=lerp(r.fz,BOAT_REST.z,k);b.g.position.set(r.x,levelCur+0.04,r.z);b.g.rotation.y+=dt*0.25*(1-k);
       if(rnd()<dt*1.5)addRipple(r.x,r.z,0.6);if(r.t>=12)boatArrive();}
   }else if(S.reed.floated&&b.g.visible){b.g.position.y=levelCur+0.04+Math.sin(t*1.1)*0.015;b.g.rotation.y+=dt*0.04;b.g.rotation.z=Math.sin(t*0.9)*0.04;}
+}
+
+/* ================================================================
+   v9: pieces of the valley's past (journal "Pieces"), theories, and Lamplight Shore
+   ================================================================ */
+const RIM_DATA={"talk":["JggFAA0ACQAQQVxWGwwEDxJBXhYGHVQAD1sZCB9BEw5aHUZJOg5NVhIQSwkWEg0ADQcAQUBXE0kJFANBQBZGSToOWxkfB0sVHwhfBxFEGw9KGQ8MChMETw==","PwkWFQ0RCRofBFsZDwYeQRQAXwERR1QsTkBWIFRBWU8DUyEdUxIPShlJHA4FDwM=","PwkSE0hdSDwaBUpLVh0DBFcTRB5ESQMJSksTSQUOFQ5JCkgFGw5ESlhJJhhXFVgBBkkdDw9NHgxLFhIAWxZGSTUPSxkZBw5BFQ1YFkgaABNOVxJH","IkEADlsWSAhUA0NME0kYFQUAQxdIABpBSVYESQYYVxJIEAcHEE8PaxMHSwkWBQ0UGgwRDwE=","IkEbBEsHSB0cBA9VFwQbQRgPDQAHSQ0OWhkVBh4NE0FLGgYNVBVHXFYeChhZQXQcHUkADkBSVhAEFAVBWRoFDFo=","IkEaAEkWSAAAQUNWBhoCBRIFDRwGSQQUXUkZGg5PVzJCUwEdVBZATBoNSwcbDkwHRg=="],"card":["JwAaEUEaDwEAQXxRGRsO","PwkSQUESBRk=","PwkeE1kKRQYaBA9AEwgZElcSRRZIBREHWxkfHUsDAhNDGgYOWkF7VhgADAkDQV4bDUkYBFtKVgAfQRAODRwdHVo="],"page":["PwkSQUESGx1UEU5eEw==","PwkSQUMaDwEAQVtRE0kZCAEEX1MLCBkEAxkCAQ5BGghBHw0bVA5fXBgMD0EDCUhTDwgABA9bD0kDABkFDQcHSQcRTksTSR8JEkFbGgQFFQZKGRQMBw4ATQ0SBg1UFUdcVh4KFRITDQQNBwBBW1EEBh4GH0FFFhpJGxZBGR4GHhISQUQdGx0RAEsXVjoDBFcRWAdIARETD0AZHAUGEhJZUwEHVAAPSxMMD0EUE0wXBAxUEkdcVgEKBVcWQgUNB1QNQEkFAA8EE00NAAdJHRUPThkcBwVXB0EcCR1aQXtRE0kIFAUTSB0cSQAOQFJWAB9BAwlfHB0OHEFbURNJBBESDw0UCR0RQU5XEkkKFhYYDRcHHhoSW0sTCAZPVzVFFkgfHQ1DWBEMSxIWCElTHAERQU1YFBBLFhYSDR8HGgBPD2oeDEsPEhdIAUgaFQhLGQUGRUEkCUhTGwwaFQ9YVgsEAANBSRwfB1QEWVwEEEsYEgBfX0gIGgUPTgQGHwRbQUwdDEkYBElNVh0DBFcNTB4YSRsPAQ==","PwkSQU4BCQ0YBA9OFxpLBxgUQxdIDxUTD10ZHgUSAxNIEgVFVAhBGT0IHAAECUQHCUVUAEFdVh0DBFcDTBERSRMTSk5WHBtBAwlIAQ1JAwhbUVYHBEEZAEAWSAsBFQ9NHgxLDhkEDQcADA1BWFwEDEsGHhdIHUZJIAlKGRUGHxUWBkhTIUkZBEFdEw1LFhYSDQcADFQJQEwFDEsoVxZMAEgLGxNBGR8HRUEjCUhTGwEbE1sZFQYHFBoPDRwGSQAJShkSBgQTERNMHg1JHRIPVB8HDk9XNUUWGgxUCFwZBAYEDFcATxweDFQIWxc="],"oda":"IkEEBEMHSB0cBA9XGR0CAhJPDTwGBQ1BQFcTRUsVGEFCHQ1JFQVLSxMaGEEeDw04CR4VEkdQAghFQS4ETAEbSRUGQBk/SQMEFhNJUwcPVAAPXxkcBQUbCEMUSB0VCkpXVgAFQQMJSAENSQAJShkFHAYMEhMNHA5JAAlKGRAFBA4TTQ0SBg1UKA9OFxpLDxIXSAFIGgETShVWCAUFVygNBAkaVBVAVlYEHgIfQUIVSAhUAkBOFxsPQQMODRIbAlpBZhkBCBgPUBUNAB0bEU8PcFEESxICE0hTBgYDTw/b9v1LKllBYhcJ","rim":"Pg8TBF9THAERQVhWBAdLEx4MF1MJSQcMTlUaSR8UBQ9IF0gCGg5bFVYIBQVXDkMWSAsYFEoZBR0ZABkFA1MxBgETD1QZHQMEBUZeUxwcBg8PUBhJHwkSQVoWCR8RTw==","theory":"JQ4ZBA0cDkkZGA9eAwwYEhISDQQNGxFBXVARAR9PVyhZUx8IBw8ITVYISwYFAEMXBQYACUpLVggfQQMJSFMPCAAEARk/HUsWFhINHhFJGQ5bURMbRUE2D0lTHAERQVxUFwUHQRgPSFMfCAdBQlxY","ren":["KkEbBFkHDRtUFUAZJAwFTVcSWRIaHREFD18ZHBlBAwhAFhs=","PwkSQVkSBAVUAkBVAwQFQRgPDQcADFQFQFYEDxkAGgQNGhtJJgRBHgVTSxgYFF9TChsbFUdcBEVLLB4TTFQbSRIAW1ETG0dBAAlCUx8bHRVKSlYPGQ4aQVkbDUkXCFtAVgwdBAUYDQQBBwAEXRdWJgVBJABOGwFOB0FbWBQFDkEeEg0SSAURFVtcBEkfDlcJRB5IGhwED1EXGksSAwBfBw0NVAdATARJHwgaBF5dSEs8BAhVGkkcABkVDQcHSRcOQlxWAQQMEk0PUxsBEUFcWA8aRUFVKUhUBAVUFk5XAkkfDlcSSBZIEBsUARs="],"mira":["LBMWD0keBx0cBF0ZGggeBh8ESVMJHVQDXVwXAg0ABBUDUzweHQJKF1YgSwIYFEMHDQ1a","OA5XGEIGTxsRQUJAVggeDwNPDTwaSRkYD0wYCgcEWUFqAQkHEAxATR4MGUEEAFQASCBUAk5XVgMeEgNBWAANSQ0OWktWBwoMEk8=","PwkSQUUWGgYaQUtQEgdMFVcEWxYGSRgOQFJWHBtPVygNBwAAGgoPURNJAA8SFg0SBBsRAEtAWA=="],"oda2":["OAkSQUEWHEkACUoZGggGEVcGQlMHHABBQ1gFHUsPHgZFB0ZJMghdSgJJHwgaBA0aBkkACUZLAhBGDhkEDQoNCAYSARk/SRgAA0FCHUgdHAQPThcFB0EWQVobAQURTw==","Mg4CEw0eBx0cBF0ZGwgABARBWRYaGx0DQ1xWHQ4AWUFpHAZOAEFbXBoFSwkSEw06SBoVCEsZBQZF"],"sachi":["OAgDTw0nAAxUCkpNAgUORgRBQh1G","OQQZQVoaBAVUFk5XAkkfDlcKQxwfR1QoCE8TSRgVFhNZFgxJAAlKGRoMHxUSEw0VBxwGQVtQGwwYTw==","Mg4CQVoSBAJUDUZSE0kSDgITDRUJHRwEXRkSAA9PVzVCHEgPFRJbGRkHSxUfBA0AHAgdE1wX","IkETDkNUHEkaBEpdVh0DBFcNTB4YSRoOWBdWIEsSGwRIA0geHRVHGQIBDkEACEMXBx5UDl9cGEkCDwQVSBIMRw=="],"fest":"Pw4ZCEobHEkdEg9NHgxLAxgAWVMODAcVRk8XBUVBOwhZBwQMVA1GTVYLBAADEg0cBkkACUoZAQgfBAVNDRUHG1QEWVwEEAQPEkFaGwdJERdKS1YKCgwSQUUcBQxa"};
+const _rk=new TextEncoder().encode('kawa-shita/9vi');
+function rimText(s){try{const b=atob(s);const u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i)^_rk[i%_rk.length];return new TextDecoder().decode(u);}catch(e){return '';}}
+const rimAll=x=>Array.isArray(x)?x.map(rimAll):(x&&typeof x==='object')?Object.fromEntries(Object.entries(x).map(([k,v])=>[k,rimAll(v)])):rimText(x);
+const PIECES=[
+  {id:'notice',t:'The notice',w:'You arrived with it',x:'THE MILL COTTAGE, free to anyone who will mend it. Typed, unsigned, and posted to you at your rooms in Kawashita. Nobody else in Kawashita seems to have had one.',g:''},
+  {id:'lantern',t:'A soot-black lantern',w:'Mill Pond · in the flood debris',x:'The handle is a heron, its neck bent to hold the ring. The glass is cracked, but someone had trimmed the wick short, as if they meant to light it again.',g:'a'},
+  {id:'gate',t:'Scratches on the gate wheel',w:'Mill Pond · the rebuilt sluice',x:'Knife marks gouged into the old sluice wheel, deep and hurried, and a date: 9 · VI. The wheel was turned by hand, from the gate itself.',g:'ac'},
+  {id:'notes',t:'The bottle notes',w:'Mill Pond · washed up on the shore',x:'They are never signed. Most are written to "my small one". Whoever writes them sends them down from somewhere upstream.',g:'b'},
+  {id:'mobile',t:'Reed birds in the rafters',w:'The mill cottage · under the old thatch',x:'Tangled in the rafters: a mobile of tiny woven reed birds, the kind you hang over a cradle. Five birds. One is missing a wing.',g:'b'},
+  {id:'marks',t:'Pencil marks on the doorframe',w:'The mill cottage · by the door',x:'Two columns of height marks. One climbs, year after year, to the height of a grown person. The other stops at the very first mark.',g:'b'},
+  {id:'hook',t:'The heron on the hearth',w:'The mill cottage · the hearth',x:'The kettle hook is carved as a heron, the same heron as the lantern handle. Whoever lived here had a heron for a sign.',g:'a'},
+  {id:'bell',t:"Mr. Oda's postscript",w:'Old Orchard · a letter from Mr. Oda',x:'"P.S. I was meant to be on the hill that night, with the bell. I wasn\'t fast enough. I have never been fast enough since."',g:'c'},
+  {id:'gatelight',t:'What Mr. Oda saw',w:'Old Orchard · by the press',x:'"Her lamp was the only light that night. She was out on the gate, shouting over the water." He would not say who she was.',g:'a'},
+  {id:'weave',t:'Every family has its own turn',w:'The Reedbeds · Mira',x:'"Every family has its own turn in the weave, Grandmother says. Hers goes under the rim, where nobody looks."',g:''},
+  {id:'boats',t:'A boat sent down',w:'The Reedbeds · Mira',x:'"Grandmother always sent one down." Every year, Mira says. She doesn\'t know what for. She has never asked.',g:'b'},
+  {id:'window',t:'The lit window',w:'Across the water, at night',x:'On the far shore one window is always lit, every night, in every weather. Mira: "Grandmother leaves the lamp on."',g:'b'},
+  {id:'postcard',t:'A postcard behind a loose board',w:'The old mill',x:'A faded postcard of a river town: Kawashita. The message has washed out except for one word, "...well...", and a year long gone.',g:''}];
+const PIECE_BY_ID=Object.fromEntries(PIECES.map(p=>[p.id,p]));
+const THEORIES=[{k:'a',t:'Was it my grandmother at the gate? Someone from this cottage opened it, I\'m sure of that.'},
+  {k:'b',t:'Did someone small drown in the flood? The notes, the marks, the boats...'},
+  {k:'c',t:'Did Mr. Oda let it happen? He keeps saying he wasn\'t fast enough.'}];
+function storyInit(){if(!S.story||typeof S.story!=='object')S.story={};const s=S.story;if(!s.f||typeof s.f!=='object')s.f={};if(!s.seen||typeof s.seen!=='object')s.seen={};s.gate=!!s.gate;s.done=!!s.done;s.gc=!!s.gc;if(!Number.isFinite(s.fest))s.fest=-1;if(!('pick' in s))s.pick=null;s.f.notice=s.f.notice||1;s.seen.notice=true;}
+function hasPiece(id){return !!(S.story&&S.story.f[id]);}
+function piece(id,quiet){storyInit();if(hasPiece(id)||!PIECE_BY_ID[id])return false;S.story.f[id]=(S.gameDay|0)+1;S.story.seen[id]=false;
+  if(!quiet){after(quiet===false?0:1.2,()=>{toast(`A new piece for your journal: ${PIECE_BY_ID[id].t} (J)`);SFX.page();});}
+  storyGateClimax(quiet);writeSave();if(journalOpen&&jPane==='pPieces')renderPieces();return true;}
+function storyGateClimax(quiet){const s=S.story;if(s.gc||!hasPiece('gate')||!hasPiece('bell'))return;s.gc=true;
+  if(!quiet)after(5,()=>{showCardBrief({k:'Pieces',t:'What happened at the gate',s:'Someone turned the sluice by hand that night, and the village below was spared. But who were the bottle notes written to?'});SFX.moment();auSwell();});}
+function storyRetro(){storyInit();const q=true;
+  if(piles.filter(p=>p.cleared).length>=2)piece('lantern',q);if(stage()>=2)piece('gate',q);if(S.notes.length)piece('notes',q);
+  if(hStage()>=1)piece('mobile',q);if(hStage()>=2)piece('marks',q);if(hStage()>=3)piece('hook',q);
+  if(oda.met>=2)piece('bell',q);if(oda.met>=3)piece('gatelight',q);if(mira.met>=2)piece('weave',q);if(S.reed.woven&&S.reed.woven.boat)piece('boats',q);
+  syncLamplight();}
+function storyReady(){return restorationPct()>=100&&orchardPct()>=100&&hStage()>=3&&rbPct()>=100&&mira.met>=3&&!!S.reed.floated;}
+/* Lamplight Shore: a small house across the water from the cottage */
+const LS={x:37,z:-8};LS.ry=Math.atan2(-LS.x,-LS.z);
+const lsDist=(x,z)=>Math.hypot(x-LS.x,z-LS.z);
+function lsW(lx,lz){const c=Math.cos(LS.ry),s2=Math.sin(LS.ry);return {x:LS.x+lx*c+lz*s2,z:LS.z-lx*s2+lz*c};}
+const lamplight=(()=>{
+  const g=new THREE.Group();g.position.set(LS.x,groundH(LS.x,LS.z),LS.z);g.rotation.y=LS.ry;scene.add(g);
+  const WD=0x5b4130,PL=0xe6d6b8,ST=[0x8f8778,0x9d9483,0x847c6e];
+  boxM(4.8,0.9,4.0,0x8f8574,g,0,-0.15,0,0.02);
+  boxM(4.3,2.3,3.5,PL,g,0,1.45,0,0.015);
+  for(const [x,z] of [[-2.15,-1.75],[2.15,-1.75],[-2.15,1.75],[2.15,1.75]])boxM(0.2,2.4,0.2,WD,g,x,1.5,z,0.01);
+  boxM(4.5,0.16,0.24,WD,g,0,2.62,1.75,0.008);boxM(4.5,0.16,0.24,WD,g,0,2.62,-1.75,0.008);
+  gableRoof(4.3,3.5,1.7,0xa8844e,g,0,2.7,0,0.03);
+  boxM(0.7,2.6,0.6,0x8a8070,g,-1.3,3.6,-1.0,0.015);
+  const door=boxM(0.9,1.8,0.08,0x7a5030,g,-0.9,1.2,1.79,0.01);
+  const glassM=new THREE.MeshToonMaterial({color:0x3a2a1c,gradientMap,emissive:new THREE.Color(0xffb35c),emissiveIntensity:0});
+  const win=new THREE.Mesh(new THREE.BoxGeometry(1.0,0.85,0.1),glassM);win.position.set(0.9,1.55,1.77);g.add(win);
+  boxM(1.14,0.08,0.16,0xd9c39a,g,0.9,2.02,1.78);boxM(1.2,0.08,0.22,0xd9c39a,g,0.9,1.1,1.8);boxM(0.06,0.85,0.12,0xd9c39a,g,0.9,1.55,1.8);
+  const halo=new THREE.Sprite(new THREE.SpriteMaterial({map:POOL_TEX,color:0xffb35c,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,fog:false}));halo.position.set(0.9,1.55,2.05);halo.scale.setScalar(3.4);halo.renderOrder=6;g.add(halo);
+  const pool=new THREE.Mesh(new THREE.CircleGeometry(2.6,24).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({map:POOL_TEX,color:new THREE.Color(1.0,0.62,0.28),transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,fog:false}));pool.position.set(0.9,0.33,3.2);pool.renderOrder=3;g.add(pool);
+  const fence=new THREE.Group();g.add(fence);const R=6.6;
+  for(let k=0;k<26;k++){const a=k/26*6.283;if(Math.abs(angWrap(a-Math.PI/2))<0.3)continue;const x=Math.cos(a)*R,z=Math.sin(a)*R;cylM(0.05,0.06,1.0,0x6b4c33,fence,x,0.45,z,5);}
+  for(let k=0;k<26;k++){const a=(k+0.5)/26*6.283;if(Math.abs(angWrap(a-Math.PI/2))<0.4)continue;const x=Math.cos(a)*R,z=Math.sin(a)*R;boxM(1.55,0.06,0.05,0x7a5a3c,fence,x,0.75,z,0,0,-a+Math.PI/2,0);}
+  const leaves=[];for(const sd of [-1,1]){const lf=new THREE.Group();lf.position.set(sd*1.0,0,R);g.add(lf);for(const y of [0.35,0.75])boxM(0.95,0.08,0.05,0x7a5a3c,lf,-sd*0.48,y,0);leaves.push({lf,sd});}
+  for(let k=0;k<5;k++)boxM(0.6+Math.random()*0.3,0.08,0.45,ST[k%3],g,0.2+(k%2)*0.2,0.05,2.6+k*0.8);
+  const bench=new THREE.Group();bench.position.set(2.4,0,2.6);g.add(bench);boxM(1.3,0.08,0.4,0x8a6a4a,bench,0,0.45,0);for(const x of [-0.5,0.5])boxM(0.08,0.45,0.35,WD,bench,x,0.22,0);
+  for(let k=0;k<6;k++){const a=k*1.05+0.4,r=4.4;cylM(0.18,0.22,0.2,0x9c8b74,g,Math.cos(a)*r,0.1,Math.sin(a)*r-0.6,8);}
+  addCollider(LS.x,LS.z,2.6);BUILDINGS.push({x:LS.x,z:LS.z,r:7});
+  return {g,glassM,halo,pool,leaves,gk:0,lamp:0,door};
+})();
+const sachi=(()=>{
+  const root=new THREE.Group(),body=new THREE.Group();root.add(body);root.visible=false;
+  const M=(c)=>makeToon(c,{rim:0.36,noHeal:true});
+  const mesh=(geo,mat,parent,x=0,y=0,z=0,ol=0.014)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.castShadow=true;parent.add(m);if(ol)addOutline(m,ol);return m;};
+  mesh(new THREE.LatheGeometry([new THREE.Vector2(0.001,0),new THREE.Vector2(0.34,0),new THREE.Vector2(0.3,0.3),new THREE.Vector2(0.24,0.7),new THREE.Vector2(0.18,0.8),new THREE.Vector2(0.001,0.82)],16),M(0x6a5a7a),body,0,0.02,0);
+  mesh(new THREE.TorusGeometry(0.2,0.07,6,14).rotateX(Math.PI/2),M(0xc8a46a),body,0,0.8,0,0.01);
+  const arms=[];for(const sx of [-1,1]){const pv=new THREE.Group();pv.position.set(sx*0.22,0.76,0);body.add(pv);mesh(new THREE.CapsuleGeometry(0.055,0.24,4,8),M(0x6a5a7a),pv,0,-0.16,0.04,0.01);mesh(new THREE.SphereGeometry(0.05,8,6),M(0xe0bc98),pv,0,-0.33,0.06,0.008);arms.push(pv);}
+  const head=new THREE.Group();head.position.set(0,1.07,0.02);body.add(head);
+  mesh(new THREE.SphereGeometry(0.22,22,16),M(0xecc8a6),head,0,0,0,0.016);
+  mesh(new THREE.SphereGeometry(0.235,20,12,0,Math.PI*2,0,1.2),M(0xd8d4cc),head,0,0.02,-0.01,0.012);
+  mesh(new THREE.SphereGeometry(0.1,10,8),M(0xd8d4cc),head,0,0.12,-0.2,0.01);
+  for(const sx of [-1,1]){mesh(new THREE.SphereGeometry(0.026,8,6).scale(1,0.6,0.5),M(0x21160f),head,sx*0.08,0.0,0.19,0);mesh(new THREE.SphereGeometry(0.035,8,6).scale(1,0.5,0.3),M(0xf2a08e),head,sx*0.13,-0.07,0.16,0);}
+  scene.add(root);const p=lsW(-0.2,3.0);root.position.set(p.x,groundH(p.x,p.z),p.z);
+  return {root,body,head,arms,face:0,nod:0};
+})();
+function syncLamplight(){sachi.root.visible=!!(S.story&&S.story.gate);}
+function lamplightVisuals(t,dt){
+  const s=S.story||{};const L=lamplight;L.gk=damp(L.gk,s.gate?1:0,1.2,dt);for(const lf of L.leaves)lf.lf.rotation.y=-lf.sd*L.gk*1.4;
+  const want=s.done?0:smooth(0.1,0.5,nightF+(1-skyHeal)*0.1);L.lamp=damp(L.lamp,want,s.done?0.5:2,dt);
+  const fl=1+0.05*Math.sin(t*7.1)*Math.sin(t*3.3);L.glassM.emissiveIntensity=L.lamp*3.2*fl;L.halo.material.opacity=L.lamp*0.9;L.pool.material.opacity=L.lamp*0.55;
+  if(sachi.root.visible){const near=Math.hypot(player.pos.x-sachi.root.position.x,player.pos.z-sachi.root.position.z)<7;const want2=near?Math.atan2(player.pos.x-sachi.root.position.x,player.pos.z-sachi.root.position.z):LS.ry;
+    sachi.face+=angWrap(want2-sachi.face)*(1-Math.exp(-2*dt));sachi.root.rotation.y=sachi.face;sachi.nod=Math.max(0,sachi.nod-dt);sachi.head.rotation.x=(talk.on&&talk.who==='sachi'?Math.sin(t*4)*0.05:0)+(sachi.nod>0?Math.sin(sachi.nod*8)*0.12:0);}
+  if(!s.gate&&storyReady()&&mode==='play'&&!cine){s.gate=true;syncLamplight();after(1.5,()=>{showCardBrief({k:'Lamplight Shore',t:'The gate is open',s:'Mira left word: "Grandmother wants to meet the one who sent the boat."'});SFX.moment();auSwell();});hud.tasksHTML='';writeSave();}
+  if(!hasPiece('window')&&L.lamp>0.6&&mode==='play'&&lsDist(player.pos.x,player.pos.z)<110){_v.set(LS.x-camera.position.x,0,LS.z-camera.position.z).normalize();camera.getWorldDirection(_v2);_v2.y=0;_v2.normalize();if(_v.dot(_v2)>0.88)piece('window');}
+  festVisuals(t,dt);
+}
+/* the far shore */
+let rimD=null;const rim=()=>rimD||(rimD=rimAll(RIM_DATA));
+function lampTalk(){
+  if(talk.on)return;const s=S.story;
+  if(s.done){const L=rim().sachi;talk.lines=[L[(S.gameDay+Math.floor(simTime/40))%L.length]];talk.onEnd=null;}
+  else{talk.lines=rim().talk.slice();talk.onEnd=lampEnd;}
+  talk.who='sachi';talk.on=true;talk.i=0;sachi.nod=0.8;$('talk').hidden=false;$('talkWho').textContent='Sachi';$('talkLine').textContent=talk.lines[0];SFX.page();
+  if(document.pointerLockElement)document.exitPointerLock();
+}
+function lampEnd(){
+  const s=S.story,R=rim();s.done=true;s.fest=(S.gameDay|0)+1;s.seen.end=false;
+  const c=lsW(0.9,2.5);sparkle(c.x,groundH(c.x,c.z)+1.5,c.z,30);auSwell();SFX.moment();player.happy=8;
+  showCardBrief({k:R.card[0],t:R.card[1],s:R.card[2]});
+  const kp='Your old basket · from Lamplight Shore';if(!S.keepsakes.includes(kp))S.keepsakes.push(kp);
+  after(6.5,()=>{showCatch({kicker:'A letter from Mr. Oda · kept in your journal',name:'',note:`“${R.oda}”`,dur:11000});SFX.page();});
+  after(18,()=>toast('Your journal has a last page (J).'));
+  hud.tasksHTML='';writeSave();
+}
+/* the yearly boat festival on the pond */
+const festBoats=[];for(let i=0;i<12;i++){const b=makeReedBoat();b.g.visible=false;b.g.scale.setScalar(1.0);scene.add(b.g);festBoats.push({b,a:i/12*6.283,r:7+(i%4)*3.2,sp:0.03+0.01*(i%3)});}
+let festShown=-1;
+function festOn(){const s=S.story;if(!s||!s.done)return false;const d=new Date();return (S.gameDay|0)===s.fest||(d.getMonth()===5&&d.getDate()===9);}
+function festVisuals(t,dt){
+  const on=festOn()&&nightF>0.45&&SEASON!=='winter';
+  for(const f of festBoats){f.b.g.visible=on;if(!on)continue;f.a+=dt*f.sp;const x=Math.cos(f.a)*f.r,z=Math.sin(f.a)*f.r;f.b.g.position.set(x,levelCur+0.04+Math.sin(t*1.2+f.a*3)*0.015,z);f.b.g.rotation.y=-f.a;f.b.fl.scale.y=0.85+0.25*Math.sin(t*13+f.a*5);}
+  if(on&&festShown!==S.gameDay&&mode==='play'){festShown=S.gameDay;toast(rim().fest);}
 }
 
 /* ================================================================
@@ -4166,6 +4332,11 @@ GATHER.forEach(G3=>INTERACTS.push({x:G3.x,z:G3.z,r:2.0,state(){if(!gatherAvail(G
   done(){S.gather[G3.id]=S.gameDay;S.inv[G3.type]+=2;toast(G3.type==='wood'?'+2 wood':'+2 stone');SFX.rustle();SFX.get();layoutGather();dailyEvent('gather');writeSave();},pos:()=>_ip.set(G3.x,groundH(G3.x,G3.z)+0.8,G3.z)}));
 RCLUMPS.forEach(c=>INTERACTS.push({x:c.x,z:c.z,r:2.4,state(){if(rbStage()<0||!reedAvail(c.i))return null;return {ok:true,text:'Cut an armful of reeds',hold:1.0};},
   done(){S.reed.cut[c.i]=S.gameDay;S.inv.reed+=2;toast('+2 reeds');SFX.rustle();SFX.get();layoutRbReeds();writeSave();},pos:()=>_ip.set(c.x,groundH(c.x,c.z)+1.6,c.z)}));
+(()=>{const l=Math.hypot(mill.x,mill.z)||1;const x=mill.x-mill.x/l*6.5,z=mill.z-mill.z/l*6.5;
+  INTERACTS.push({x,z,r:2.6,state(){if(stage()<2||hasPiece('postcard'))return null;return {ok:true,text:'A board on the mill wall is loose',hold:0.9};},
+    done(){SFX.rustle();piece('postcard',false);},pos:()=>_ip.set(x,groundH(x,z)+1.4,z)});})();
+(()=>{const w=lsW(-0.2,4.0);INTERACTS.push({x:w.x,z:w.z,r:2.6,state(){if(!(S.story&&S.story.gate)||talk.on)return null;return S.story.done?{ok:true,text:'Sit with Sachi a while',hold:0.4}:{ok:true,text:'Show her your old basket',hold:1.4};},
+  done(){lampTalk();},pos:()=>_ip.set(sachi.root.position.x,sachi.root.position.y+1.7,sachi.root.position.z)});})();
 /* v8: a small "Slide" prompt around the frozen pond's edge */
 (()=>{const lv=LEVELS[3];for(let k=0;k<14;k++){const a=k/14*6.283;let r=6;for(;r<70;r+=0.5)if(groundH(Math.cos(a)*r,Math.sin(a)*r)>lv+0.05)break;if(r>=70)continue;
   const x=Math.cos(a)*(r-1.2),z=Math.sin(a)*(r-1.2);
@@ -4287,7 +4458,7 @@ function puff(x,y,z,n,col,size=0.3){for(let i=0;i<n;i++)fxSoft.emit(x+rr(-0.6,0.
 function sparkle(x,y,z,n){for(let i=0;i<n;i++){tmpCol.setRGB(2.2,1.9,1.1);fxGlow.emit(x+rr(-0.7,0.7),y+rr(0,0.8),z+rr(-0.7,0.7),rr(-0.4,0.4),rr(0.4,1.4),rr(-0.4,0.4),tmpCol,rr(0.06,0.12),rr(0.8,1.6),-0.1,1.0,0.3);}}
 
 function clearPile(p){
-  p.anim=0;
+  p.anim=0;if(piles.filter(q=>q.cleared||q===p).length>=2)piece('lantern');
   S.inv.wood+=2;S.inv.stone+=1;
   toast('+2 driftwood, +1 stone');SFX.knock(0,220);SFX.knock(0.12,180);SFX.get();
   puff(p.x,groundH(p.x,p.z)+0.2,p.z,18,new THREE.Color(0.62,0.55,0.44),0.4);
@@ -4350,7 +4521,7 @@ function startSweep(center,heal){
   G.uHealPrev.value=G.uHealNext.value;G.uHealNext.value=heal;G.uSweepC.value.set(center.x,center.z);G.uSweepR.value=0;sweep.active=true;sweep.t=0;
 }
 function completeProject(n,center){
-  AU.level=n;
+  AU.level=n;if(n>=2)after(9,()=>piece('gate'));
   startSweep(center,HEALS[n]);
   auSwell();
   player.happy=6;
@@ -4566,6 +4737,7 @@ function canStep(fx,fz,tx,tz){
   if(blocked(tx,tz))return false;
   if(oStage()<4&&rbDist(tx,tz)<27&&rbDist(fx,fz)>=27){if(simTime-gateHintT>8){gateHintT=simTime;toast('A fence and thick mist close the path upstream. Perhaps once the cider press turns again.');}return false;}
   if(stage()<3&&orchDist(tx,tz)<24&&orchDist(fx,fz)>=24){if(simTime-gateHintT>8){gateHintT=simTime;toast('Brambles choke the way up to the old orchard. Restore Mill Pond first.');}return false;}
+  if(!(S.story&&S.story.gate)&&lsDist(tx,tz)<7.0&&lsDist(fx,fz)>=7.0){if(simTime-gateHintT>8){gateHintT=simTime;toast(hasPiece('window')?'The garden gate is latched. Inside, the lamp is burning, as it always is.':'A low garden gate, latched. A lamp burns in the window.');}return false;}
   const d1=depthAt(tx,tz),d0=depthAt(fx,fz);
   if(d1>1.0&&d1>d0-0.005&&!onIce(tx,tz))return false;
   const iH=(x,z)=>onIce(x,z)?Math.max(walkH(x,z),levelCur+0.03):walkH(x,z);const h0=iH(fx,fz),h1=iH(tx,tz),run=Math.hypot(tx-fx,tz-fz)+1e-5;
@@ -4925,6 +5097,7 @@ const TP={
   home:()=>teleport(home.ix,home.iz,HOME.x,HOME.z),
   garden:()=>{const w=homeW(7.4,-2.7),c=homeW(7.4,0);teleport(w.x,w.z,c.x,c.z);},
   reedbed:()=>teleport(RPATH[3][0],RPATH[3][1],RB.x,RB.z),
+  lamp:()=>{const w=lsW(0,9);teleport(w.x,w.z,LS.x,LS.z);},
   press:()=>teleport(press.ix+(press.ix-press.x)*0.3,press.iz+(press.iz-press.z)*0.3,press.x,press.z),
   yard:()=>teleport(YARD.x+(YARD.x-mill.x)*0.25,YARD.z+(YARD.z-mill.z)*0.25,YARD.x,YARD.z)
 };
@@ -4941,7 +5114,7 @@ function debugComplete(n){
   else if(n===8){if(stage()<3)setStageInstant(3);TP.home();const st=HOME_STEPS[hStage()+1];if(st){for(const [k,v] of Object.entries(st.cost))S.inv[k]=Math.max(S.inv[k],v);buildHomeStep();}}
   else{setStageInstant(8);TP.reedbed();S.inv.wood=Math.max(S.inv.wood,1);S.inv.reed=Math.max(S.inv.reed,2);for(const b of boardwalk.slice(0,4))setBoardwalk(b.i,true);mendBoardwalk(boardwalk[4]);}
 }
-if(DEBUG)window.__mz={setStageInstant,setJ:(o,p)=>setJournal(o,p),scrap,renderScrap,showPane:typeof showPane==='function'?showPane:null,get boatRun(){return boatRun;},WEAVE,weaveNext,launchBoat,reedBoat,spawnSight,SPECIES_BY_ID,setJournal:typeof setJournal==="function"?setJournal:null,scene,FALLS,TP,S,cam,player,teleport,setHomeStage,groundH,polyPoint,INLET,FALL,RB,get mode(){return mode;}};
+if(DEBUG)window.__mz={piece,storyRetro,lampTalk,lampEnd,storyReady,LS,lsW,get story(){return S.story;},renderPieces,HOME,ORCH,HERO,mill,BRIDGES,SIGN,PATHS,BUILDINGS,POND_R,setStageInstant,setJ:(o,p)=>setJournal(o,p),scrap,renderScrap,showPane:typeof showPane==='function'?showPane:null,get boatRun(){return boatRun;},WEAVE,weaveNext,launchBoat,reedBoat,spawnSight,SPECIES_BY_ID,setJournal:typeof setJournal==="function"?setJournal:null,scene,FALLS,TP,S,cam,player,teleport,setHomeStage,groundH,polyPoint,INLET,FALL,RB,get mode(){return mode;}};
 function toggleDebug(force){
   const el=$('debug');const on=force!==undefined?force:el.hidden;el.hidden=!on;$('fps').hidden=!on;
   if(on)renderQualityUI();
@@ -4994,7 +5167,7 @@ function startGame(){
   cam.target.copy(player.pos);cam.target.y+=1.25;
   canvas.focus({preventScroll:true});
   setTimeout(()=>{$('hint').classList.add('gone');},30000);
-  if(!sandbox&&(S.news|0)<8){const back=S.visitDays>1||stage()>0;S.news=8;if(back)setTimeout(()=>toast('New in the valley (v8): a "Then and now" scrapbook, warmer nights and clearer winter ice. See your journal (J).'),6500);}
+  if(!sandbox&&(S.news|0)<9){const back=S.visitDays>1||stage()>0;S.news=9;if(back)setTimeout(()=>toast('Something in the valley is remembering. See the new Pieces tab in your journal (J).'),6500);}
   if(welcomeMsg)setTimeout(()=>toast(welcomeMsg),1800);
   else if(S.visitDays<=1&&S.gifts.length&&!sandbox)setTimeout(()=>toast('The flood left a few things on the shore. Look for the glints.'),2200);
   writeSave();
@@ -5008,11 +5181,12 @@ function boot(hotData){
     if(STATE_PARAM>=1)S.hours=STATE_PARAM===3?dayLen().set-1.3:11;
     if(STATE_PARAM>=4)teleport(ORCH.x+13,ORCH.z+3,ORCH.x,ORCH.z);
     if(STATE_PARAM===8)TP.home();if(STATE_PARAM===9)TP.reedbed();
+    try{storyRetro();}catch(e){}
     S.lastDay=dayKey();S.visitDays=1;newDaily(dayKey());S.gifts=[];for(let i=0;i<3;i++){const g=makeGift();if(g)S.gifts.push(g);}layoutGifts();}
   else{
     saved=(hotData&&validSave(hotData))?hotData:readSave();
     if(saved)applySave(saved);else{cam.yaw=0.32;player.face=player.faceT=Math.PI;}
-    syncWorldToStage();
+    syncWorldToStage();try{storyRetro();}catch(e){console.error(e);}
     layoutGifts();arrive();applySeedlings();
   }
   if(HOUR_PARAM!==null)S.hours=HOUR_PARAM;else if(HOUR_WORD)S.hours=hourWord(HOUR_WORD);
