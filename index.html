@@ -103,9 +103,10 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
 #lookHint{position:absolute;left:50%;top:60%;transform:translate(-50%,-50%);padding:9px 20px 8px;color:#fff7de;font-size:18px;text-shadow:0 1px 3px rgba(0,0,0,.7);white-space:nowrap;pointer-events:none;transition:opacity .5s}
 #lookHint::before{content:"";position:absolute;inset:0;background:rgba(30,22,14,.45);border-radius:30px;filter:blur(5px);z-index:-1}
 #lookHint kbd,#hint kbd{font-family:var(--f-display);background:rgba(242,230,201,.92);color:var(--ink);border-radius:4px;padding:0 6px;font-size:14px;text-shadow:none}
+#lookHint.gone{opacity:0}
 #lookHint.quiet{opacity:.55;font-size:15px;top:auto;bottom:calc(90px + env(safe-area-inset-bottom,0px));transform:translateX(-50%)}
 
-#toasts{position:absolute;top:calc(18px + env(safe-area-inset-top,0px));right:calc(16px + env(safe-area-inset-right,0px));display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+#toasts{position:absolute;top:calc(58px + env(safe-area-inset-top,0px));right:calc(16px + env(safe-area-inset-right,0px));display:flex;flex-direction:column;align-items:flex-end;gap:8px}
 .toast{padding:7px 16px 6px;font-size:16px;animation:toastIn .45s cubic-bezier(.2,.9,.2,1.2),toastOut .5s ease 2.4s forwards}
 .toast::before{inset:4px}
 @keyframes toastIn{from{transform:translateX(30px) rotate(3deg);opacity:0}}
@@ -492,12 +493,12 @@ body.touchUI #hint,body.touchUI #lookHint,body.touchUI #satchel{display:none!imp
         </div>
         <div class="page">
           <div class="news" id="jNews">
-            <h2>What's new · v12</h2>
+            <h2>What's new · v12.1</h2>
             <ul>
-              <li>The valley fights back now. A mending staff, a dodge, and the heron lantern against the stillwater blight. (Gentle mode is under Valley &amp; settings.)</li>
-              <li>The Old Koi waits in the outlet gate. Already past him? Visit the outlet at dawn.</li>
-              <li>Chapter 1, the Old Orchard: a seed sling on the gatepost, thorn-knots, and something wound around the last old tree.</li>
-              <li>Three places in the orchard are hidden. Some small friends may help you find them.</li>
+              <li>No more muck-mites. The pond's enemies are sick river spirits now: silt-wisps and shellmoths. Mend them and they go home, for good.</li>
+              <li>The Bramble Mother fight is easier to read: a wider camera, her high knots out on branches against the sky, and a sling sight that snaps to them.</li>
+              <li>The Old Koi looks like a koi now, gold and white under the silt.</li>
+              <li>A lantern on the old dock, and the mill windows lit, even on the grey first morning.</li>
             </ul>
           </div>
           <h2>Today's three small things</h2>

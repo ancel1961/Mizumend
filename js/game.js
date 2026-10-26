@@ -8,7 +8,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const $ = (id) => document.getElementById(id);
 /* Systems in other modules (combat, and later co-op) plug in here instead of reaching into this file */
-const HOOKS={sim:[],vis:[],pose:[],project:[],pileBlocked:null,sluiceBlocked:null,brambleBlocked:null,cuttingsBlocked:null,boot:[]};
+const HOOKS={sim:[],vis:[],pose:[],project:[],pileBlocked:null,sluiceBlocked:null,brambleBlocked:null,cuttingsBlocked:null,boot:[],bossActive:null,safeSpot:null};
 let showerT=0;
 let hitStop=0,timeScale=1;
 function showError(msg){ const el=$('err'); el.textContent=msg; el.hidden=false; }
@@ -42,6 +42,8 @@ const PARAMS=(()=>{
   return out;
 })();
 const DEBUG=PARAMS.debug==='1'||PARAMS.debug==='true';
+/* v12.1: the free prologue, however it is asked for (?edition=prologue, #prologue). Every orchard gate checks this one flag. */
+const PROLOGUE=PARAMS.edition==='prologue'||PARAMS.prologue==='1'||PARAMS.prologue==='true';
 const STATE_PARAM=/^[0-9]$/.test(PARAMS.state||'')?Number(PARAMS.state):null;
 const TIERS0=['low','medium','high','ultra'];
 const Q_PARAM=TIERS0.includes(PARAMS.quality)?PARAMS.quality:(TIERS0.find(t=>PARAMS[t]==='1')||null);
@@ -1070,6 +1072,27 @@ const glowSprites=[];
 function addGlow(parent,x,y,z,size,col=0xffb35c){const m=new THREE.Sprite(new THREE.SpriteMaterial({map:POOL_TEX,color:col,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,fog:false}));m.position.set(x,y,z);m.scale.setScalar(size);m.renderOrder=6;parent.add(m);glowSprites.push(m);return m;}
 function makeLightPool(x,z,r,parent){const m=new THREE.Mesh(new THREE.CircleGeometry(r,24).rotateX(-Math.PI/2),poolMat);m.position.set(x,groundH(x,z)+0.06,z);m.renderOrder=3;(parent||scene).add(m);lightPools.push(m);return m;}
 function addLamp(g,lx,ly,lz){g.updateMatrixWorld(true);const v=g.localToWorld(new THREE.Vector3(lx,ly,lz));const L=new THREE.PointLight(0xffb35c,0,16,2);L.position.copy(v);scene.add(L);lampLights.push(L);makeLightPool(v.x,v.z,3.4);return L;}
+/* v12.1: one warm note in the bleak opening, readable from where you wake: the mill's lit windows and a lantern on an old dock */
+const warmNotes=[];
+function warmGlow(parent,x,y,z,size){const m=addGlow(parent,x,y,z,size,0xffb050);warmNotes.push(m);return m;}
+for(const x of [-1.4,1.4])for(const zs of [-1,1])warmGlow(mill.g,x,3.1,zs*2.5,1.7);
+const dock=(()=>{
+  const g=new THREE.Group();const x0=4.2,z0=50.5,len=8.5;g.position.set(x0,0,z0);scene.add(g);
+  const wood=0x6e5236,dark=0x3e2c1e,deckY=1.98;
+  for(let i=0;i<Math.round(len/0.32);i++){const z=-i*0.32;boxM(1.5,0.07,0.28,i%3?wood:0x7a5c3e,g,0,deckY,z-0.16,0.006,0,(rnd()-0.5)*0.03,0);}
+  for(const sx of [-0.68,0.68])for(let k=0;k<=3;k++){const z=-k*len/3;const gy=groundH(x0+sx,z0+z);const h=deckY-gy+0.5;cylM(0.07,0.08,h,dark,g,sx,gy+h/2-0.25,z,6,0.008);}
+  /* the lantern post at the far end */
+  const L=new THREE.Group();L.position.set(0.62,deckY,-len+0.25);g.add(L);
+  cylM(0.05,0.06,1.6,dark,L,0,0.8,0,6,0.008);boxM(0.5,0.05,0.05,dark,L,-0.22,1.58,0,0.004);cylM(0.008,0.008,0.22,0x2a2420,L,-0.42,1.45,0,4);
+  const lm=makeToon(0xffe6b0,{emissive:0xffb35c,noHeal:true,tag:'docklantern'});lanternMats.push(lm);
+  boxM(0.2,0.05,0.2,0x2a2420,L,-0.42,1.34,0,0);boxM(0.22,0.05,0.22,0x2a2420,L,-0.42,1.06,0,0);
+  const core=new THREE.Mesh(new THREE.BoxGeometry(0.15,0.22,0.15),lm);core.position.set(-0.42,1.2,0);L.add(core);
+  warmGlow(L,-0.42,1.2,0,2.6);
+  g.updateMatrixWorld(true);const lp=L.localToWorld(new THREE.Vector3(-0.42,1.2,0));const pl=new THREE.PointLight(0xffb35c,0,14,2);pl.position.copy(lp);scene.add(pl);lampLights.push(pl);
+  STATIC_GROUPS.push(g);
+  return {g,lp};
+})();
+
 addLamp(cottage,0.0,1.9,2.7);addLamp(mill.g,0.4,3.0,-3.4);
 for(const [lx,lz] of [[-1.4,3.4],[1.4,3.4],[-1.4,-3.4],[1.4,-3.4]]){const v=mill.g.localToWorld(new THREE.Vector3(lx,0,lz));makeLightPool(v.x,v.z,2.3);}
 const SIGN={x:9,z:51};
@@ -1849,7 +1872,7 @@ function setMuted(m){AU.muted=m;if(AU.master&&AU.ctx)AU.master.gain.setTargetAtT
 const SAVE_KEY='rebuild-the-valley:mill-pond:v1';
 const S={hours:8.5,inv:{wood:0,stone:0,reed:0,cut:0},sight:{butterflies:false,ducks:false,birds:false,fireflies:false,fish:false},errands:{},muted:false,
   lastDay:null,visitDays:0,daily:null,gifts:[],keepsakes:[],col:{},notes:[],cosmetics:{},wearing:'straw',gameDay:0,cutTaken:0,decor:[],stored:{},
-  home:0,plots:null,crops:{},ciders:{},earned:{},gather:{},reed:{bw:[false,false,false,false,false],cut:[],woven:{},floated:false},news:0,story:null,blight:{koi:false},harvests:0,photos:0,applePick:{}};
+  home:0,plots:null,crops:{},ciders:{},earned:{},gather:{},reed:{bw:[false,false,false,false,false],cut:[],woven:{},floated:false},news:0,story:null,blight:{koi:false},harvests:0,photos:0,applePick:{},spirits:{cleared:[],left:{}}};
 function stage(){if(!piles.every(p=>p.cleared))return 0;if(!sluice.built)return 1;if(!SPOTS.every(s=>s.planted))return 2;return 3;}
 function oStage(){if(stage()<3)return -1;if(!brambles.every(b=>b.cleared))return 0;if(!chanSegs.every(c=>c.fixedOK))return 1;if(!stumps.every(s=>s.planted))return 2;if(!press.fixedOK)return 3;return 4;}
 function restorationPct(){const p=piles.filter(x=>x.cleared).length*5;const s=sluice.built?35:0;const r=SPOTS.filter(x=>x.planted).length*4.375;return Math.round(p+s+r);}
@@ -1880,7 +1903,7 @@ function serialize(){
     brambles:brambles.map(b=>b.cleared),heaps:stoneHeaps.map(h=>h.left),chan:chanSegs.map(c=>c.fixedOK),stumps:stumps.map(s=>s.planted),
     lastDay:S.lastDay,visitDays:S.visitDays,daily:S.daily,gifts:S.gifts,keepsakes:S.keepsakes,col:S.col,notes:S.notes,cosmetics:S.cosmetics,wearing:S.wearing,gameDay:S.gameDay,cutTaken:S.cutTaken,
     press:press.fixedOK,oda:{met:oda.met,lastDay:oda.lastDay},decor:S.decor,stored:S.stored,
-    home:S.home,plots:S.plots,crops:S.crops,ciders:S.ciders,earned:S.earned,gather:S.gather,reed:S.reed,harvests:S.harvests,photos:S.photos,applePick:S.applePick,mira:{met:mira.met,lastDay:mira.lastDay},news:S.news,story:S.story,blight:S.blight};
+    home:S.home,plots:S.plots,crops:S.crops,ciders:S.ciders,earned:S.earned,gather:S.gather,reed:S.reed,harvests:S.harvests,photos:S.photos,applePick:S.applePick,mira:{met:mira.met,lastDay:mira.lastDay},news:S.news,story:S.story,blight:S.blight,spirits:S.spirits};
 }
 function writeSave(){if(sandbox)return;try{localStorage.setItem(SAVE_KEY,JSON.stringify(serialize()));}catch(e){}}
 function validSave(d){return !!(d&&typeof d==='object'&&(d.v===1||d.v===2||d.v===3||d.v===4));}
@@ -1934,6 +1957,9 @@ function applySave(d){
     S.reed.woven={};if(d.reed.woven&&typeof d.reed.woven==='object')for(const k of ['basket','mat','boat'])if(d.reed.woven[k])S.reed.woven[k]=true;S.reed.floated=!!d.reed.floated;}
   S.news=Number.isFinite(d.news)?d.news|0:0;
   S.blight={};for(const k of ['koi','koiRe','bramble','sling','swing','tin','crow','shower'])S.blight[k]=!!(d.blight&&d.blight[k]);
+  /* v13: mended spirits per pile (saves from v12 and earlier simply have none yet) */
+  {const sp=d.spirits&&typeof d.spirits==='object'?d.spirits:{};S.spirits={cleared:Array.isArray(sp.cleared)?sp.cleared.filter(n=>Number.isInteger(n)&&n>=0&&n<64):[],left:{}};
+   if(sp.left&&typeof sp.left==='object')for(const k in sp.left){const v=sp.left[k];if(/^\d+$/.test(k)&&Array.isArray(v))S.spirits.left[k]=v.filter(t=>t==='wisp'||t==='moth').slice(0,8);}}
   S.story=null;if(d.story&&typeof d.story==='object'){const t=d.story;S.story={f:{},seen:{},gate:!!t.gate,done:!!t.done,gc:!!t.gc,fest:Number.isFinite(t.fest)?t.fest|0:-1,pick:['a','b','c'].includes(t.pick)?t.pick:null};
     if(t.f&&typeof t.f==='object')for(const k of Object.keys(t.f))if(PIECE_BY_ID[k]&&t.f[k])S.story.f[k]=Number(t.f[k])||1;if(t.seen&&typeof t.seen==='object')for(const k of Object.keys(t.seen))S.story.seen[k]=!!t.seen[k];}
   if(d.mira&&typeof d.mira==='object'){const m=num(d.mira.met,0,3),l=num(d.mira.lastDay,-1,1e7);if(m!==null)mira.met=m|0;if(l!==null)mira.lastDay=Math.floor(l);}
@@ -1941,7 +1967,7 @@ function applySave(d){
 }
 function syncOrchard(){
   const os=oStage();
-  setBarrierOpen(stage()>=3,true);
+  setBarrierOpen(stage()>=3&&!PROLOGUE,true);
   brambles.forEach(b=>{if(b.anim<0){b.g.visible=!b.cleared;}});
   stoneHeaps.forEach(syncStoneHeap);
   chanU.uFlow.value=chanSegs.every(c=>c.fixedOK)?1:0;
@@ -3865,7 +3891,9 @@ function keyDown(code){return keys.has(code)||(tapUntil[code]!==undefined&&simTi
 function findInteract(){
   let best=null,bd=1e9;
   const fx=Math.sin(player.face),fz=Math.cos(player.face);
+  const bossOn=HOOKS.bossActive&&HOOKS.bossActive();
   for(const it of INTERACTS){
+    if(bossOn&&!it.boss)continue;
     if(it.upd)it.upd();
     const dx=it.x-player.pos.x,dz=it.z-player.pos.z;const d=Math.hypot(dx,dz);if(d>it.r)continue;
     const st=it.state();if(!st)continue;
@@ -3943,9 +3971,11 @@ function glowUI(t){
 }
 const lookEl=$('lookHint');let everLocked=false,lookQuietT=0;
 function lookHintUI(dt){
-  const show=mode==='play'&&!cine&&!journalOpen&&!photo.on&&document.pointerLockElement!==canvas&&!dragging;
+  if(lookEl.classList.contains('gone'))return;
+  const show=mode==='play'&&!cine&&!journalOpen&&!photo.on&&document.pointerLockElement!==canvas&&!dragging&&!everLocked&&!(HOOKS.bossActive&&HOOKS.bossActive());
   lookEl.hidden=!show;
-  if(show){lookQuietT+=dt;lookEl.classList.toggle('quiet',everLocked||lookQuietT>8);}
+  if(show){lookQuietT+=dt;lookEl.classList.toggle('quiet',lookQuietT>8);}
+  if(everLocked&&!lookEl.classList.contains('gone')){lookEl.classList.add('gone');lookEl.hidden=false;setTimeout(()=>{lookEl.hidden=true;},650);}
 }
 
 const tmpCol=new THREE.Color();
@@ -4022,7 +4052,7 @@ function completeProject(n,center){
   player.happy=6;
   if(n===1){spawnButterflies();after(4,()=>sighting('butterflies'));}
   if(n===2){spawnDucks(false);after(5.5,()=>{sighting('ducks');toast('New in your journal: Mallard');});spotMarkers.forEach((m,i)=>m.visible=!SPOTS[i].planted);}
-  if(n===3&&PARAMS.edition!=='prologue')after(9.4,()=>{setBarrierOpen(true);toast('The fallen log across the west lane has rolled aside.');hud.tasksHTML='';});
+  if(n===3&&!PROLOGUE)after(9.4,()=>{setBarrierOpen(true);toast('The fallen log across the west lane has rolled aside.');hud.tasksHTML='';});
   startCine(CARDS[n],center,{warp:n===3,floor:LEVELS[n],lookY:LEVELS[n],height:8});
   writeSave();
 }
@@ -4209,6 +4239,7 @@ function updateDay(dt){
   for(const m of lanternMats)m.emissiveIntensity=Math.max(lampK,(1-skyHeal)*0.45)*2.8;
   poolMat.opacity=lampK*(0.3+0.16*nightF+0.45*G.uSnow.value);
   for(const gs of glowSprites)gs.material.opacity=lampK*0.92;
+  for(const gs of warmNotes)gs.material.opacity=Math.max(lampK*0.92,(1-skyHeal)*0.8);   /* v12.1: lit even on the grey first morning */
   G.uSnow.value=damp(G.uSnow.value,SEASON==='winter'?lerp(0.84,1,W.snow):0,1.5,dt);
   G.uGrassH.value=damp(G.uGrassH.value,SEASON==='winter'?0.42:1,1.5,dt);
   G.uDry.value=damp(G.uDry.value,P.dry||0,1.5,dt);
@@ -4239,7 +4270,7 @@ function depthAt(x,z){if(onBridge(x,z))return 0;return levelCur-groundH(x,z);}
 function canStep(fx,fz,tx,tz){
   if(blocked(tx,tz))return false;
   if(oStage()<4&&rbDist(tx,tz)<27&&rbDist(fx,fz)>=27){if(simTime-gateHintT>8){gateHintT=simTime;toast('A fence and thick mist close the path upstream. Perhaps once the cider press turns again.');}return false;}
-  if(stage()<3&&orchDist(tx,tz)<24&&orchDist(fx,fz)>=24){if(simTime-gateHintT>8){gateHintT=simTime;toast('Brambles choke the way up to the old orchard. Restore Mill Pond first.');}return false;}
+  if((stage()<3||PROLOGUE)&&orchDist(tx,tz)<24&&orchDist(fx,fz)>=24){if(simTime-gateHintT>8){gateHintT=simTime;toast(PROLOGUE&&stage()>=3?'The orchard lane is where the full game begins. Thank you for playing the prologue.':'Brambles choke the way up to the old orchard. Restore Mill Pond first.');}return false;}
   if(!(S.story&&S.story.gate)&&lsDist(tx,tz)<7.0&&lsDist(fx,fz)>=7.0){if(simTime-gateHintT>8){gateHintT=simTime;toast(hasPiece('window')?'The garden gate is latched. Inside, the lamp is burning, as it always is.':'A low garden gate, latched. A lamp burns in the window.');}return false;}
   const d1=depthAt(tx,tz),d0=depthAt(fx,fz);
   if(d1>1.0&&d1>d0-0.005&&!onIce(tx,tz))return false;
@@ -4333,12 +4364,12 @@ function updateCamera(dt){
     const a=t*0.03+0.6;camera.position.set(Math.cos(a)*56,9.5+Math.sin(t*0.05)*1.2,Math.sin(a)*56);
     cam.look.set(0,6.5,0);camera.lookAt(cam.look);return;
   }
-  cam.target.x=damp(cam.target.x,player.pos.x,10,dt);cam.target.z=damp(cam.target.z,player.pos.z,10,dt);cam.target.y=damp(cam.target.y,player.pos.y+1.25,6,dt);
+  cam.target.x=damp(cam.target.x,player.pos.x,10,dt);cam.target.z=damp(cam.target.z,player.pos.z,10,dt);cam.target.y=damp(cam.target.y,player.pos.y+1.25+(cam.frame&&cam.frame.lift?cam.frame.lift*(cam.frameK||0):0),6,dt);
   cam.inside=damp(cam.inside??0,homeInside()?1:0,4,dt);
   const fr=cam.frame;cam.frameK=damp(cam.frameK||0,fr?1:0,2.5,dt);
   if(fr){cam.target.x=lerp(cam.target.x,lerp(player.pos.x,fr.x,0.32),cam.frameK);cam.target.z=lerp(cam.target.z,lerp(player.pos.z,fr.z,0.32),cam.frameK);
     if(simTime-lastLookT>1.2){const want=Math.atan2(player.pos.x-fr.x,player.pos.z-fr.z);cam.yaw+=angWrap(want-cam.yaw)*(1-Math.exp(-1.6*dt));}}
-  const pitchE=lerp(lerp(cam.pitch,0.9,cam.inside),Math.max(cam.pitch,fr?fr.pitch:0.5),cam.frameK),distE=lerp(lerp(cam.dist,5.4,cam.inside),Math.max(cam.dist,fr?fr.dist:10),cam.frameK);
+  const pitchE=lerp(lerp(cam.pitch,0.9,cam.inside),fr?clamp(fr.pitch+(cam.pitch-0.45)*0.25,fr.pitch-0.08,fr.pitch+0.12):0.5,cam.frameK),distE=lerp(lerp(cam.dist,5.4,cam.inside),Math.max(cam.dist,fr?fr.dist:10),cam.frameK);
   const cp=Math.cos(pitchE),sp=Math.sin(pitchE);
   const want=_v3.set(cam.target.x+Math.sin(cam.yaw)*cp*distE,cam.target.y+sp*distE+0.4,cam.target.z+Math.cos(cam.yaw)*cp*distE);
   { const tx=cam.target.x,tz=cam.target.z,dx=want.x-tx,dz=want.z-tz,aa=dx*dx+dz*dz;let best=1;
@@ -4587,6 +4618,7 @@ for(const id of ['qRow','dbgQ'])$(id).addEventListener('click',(e)=>{const b=e.t
    Test panel (#debug, #state0-6, #spring/#summer/#autumn/#winter, #clear/#cloudy/#rain/#snow, #hour=19.5)
    ================================================================ */
 function markSandbox(){sandbox=true;$('sandbox').hidden=false;}
+HOOKS.safeSpot=(x,z)=>{if(orchDist(x,z)<34)return {x:-70.5,z:-27.6,look:{x:ORCH.x,z:ORCH.z}};if(rbDist(x,z)<30){const p=RPATH[3];return {x:p[0],z:p[1],look:{x:RB.x,z:RB.z}};}return null;};
 function teleport(x,z,lookX=0,lookZ=0){
   if(FISH.state!=='idle')fishStop(true);
   player.pos.set(x,walkH(x,z),z);player.vel.set(0,0,0);player.vy=0;
@@ -4595,7 +4627,9 @@ function teleport(x,z,lookX=0,lookZ=0){
 function outward(x,z,d){const l=Math.hypot(x,z)||1;return [x+x/l*d,z+z/l*d];}
 const TP={
   spawn:()=>teleport(2,60,0,0),
-  debris:()=>{const p=piles.find(p=>!p.cleared)||piles[0];const [x,z]=outward(p.x,p.z,2.6);teleport(x,z,p.x,p.z);},
+  debris:()=>{const p=piles.find(p=>!p.cleared)||piles[0];let best=null;
+    for(let r=2.6;r<9&&!best;r+=0.8)for(let k=0;k<16;k++){const a=k/16*6.283+Math.atan2(p.z,p.x);const x=p.x+Math.cos(a)*r,z=p.z+Math.sin(a)*r;if(depthAt(x,z)<0.02&&!blocked(x,z)){best=[x,z];break;}}
+    const [x,z]=best||outward(p.x,p.z,6);teleport(x,z,p.x,p.z);},
   sluice:()=>teleport(sluice.south.x,sluice.south.z+1.5,sluice.x,sluice.z),
   mill:()=>{const [x,z]=outward(mill.x,mill.z,-9);teleport(x,z,mill.x,mill.z);},
   reeds:()=>{const c=CLUMPS[0];teleport(c.x+2.2,c.z+2.2,c.x,c.z);},
@@ -4604,7 +4638,7 @@ const TP={
   fishing:()=>{if(!FSPOTS.length)fishSpotsStep(0);const s=FSPOTS.find(q=>q.kind==='pond')||FSPOTS[0];if(!s)return;
     const a=Math.atan2(s.z,s.x);let r=Math.hypot(s.x,s.z);while(r<60&&depthAt(Math.cos(a)*r,Math.sin(a)*r)>0.4)r+=0.5;
     if(s.kind==='stream'){const p=polyInfo(s.x,s.z,INLET);teleport(s.x-p.tz*4,s.z+p.tx*4,s.x,s.z);}else teleport(Math.cos(a)*(r+0.6),Math.sin(a)*(r+0.6),s.x,s.z);},
-  orchard:()=>teleport(ORCH.x+13,ORCH.z+3,ORCH.x,ORCH.z),
+  orchard:()=>{if(PROLOGUE){teleport(BARRIER.x+5,BARRIER.z+1,BARRIER.x,BARRIER.z);toast('Prologue: the orchard is part of the full game.');return;}teleport(ORCH.x+13,ORCH.z+3,ORCH.x,ORCH.z);},
   home:()=>teleport(home.ix,home.iz,HOME.x,HOME.z),
   garden:()=>{const w=homeW(7.4,-2.7),c=homeW(7.4,0);teleport(w.x,w.z,c.x,c.z);},
   reedbed:()=>teleport(RPATH[3][0],RPATH[3][1],RB.x,RB.z),
@@ -4625,7 +4659,7 @@ function debugComplete(n){
   else if(n===8){if(stage()<3)setStageInstant(3);TP.home();const st=HOME_STEPS[hStage()+1];if(st){for(const [k,v] of Object.entries(st.cost))S.inv[k]=Math.max(S.inv[k],v);buildHomeStep();}}
   else{setStageInstant(8);TP.reedbed();S.inv.wood=Math.max(S.inv.wood,1);S.inv.reed=Math.max(S.inv.reed,2);for(const b of boardwalk.slice(0,4))setBoardwalk(b.i,true);mendBoardwalk(boardwalk[4]);}
 }
-if(DEBUG)window.__mz={piece,storyRetro,lampTalk,lampEnd,storyReady,LS,lsW,get story(){return S.story;},renderPieces,HOME,ORCH,HERO,mill,BRIDGES,SIGN,PATHS,BUILDINGS,POND_R,setStageInstant,setJ:(o,p)=>setJournal(o,p),scrap,renderScrap,showPane:typeof showPane==='function'?showPane:null,get boatRun(){return boatRun;},WEAVE,weaveNext,launchBoat,reedBoat,spawnSight,SPECIES_BY_ID,setJournal:typeof setJournal==="function"?setJournal:null,scene,FALLS,TP,S,cam,player,teleport,setHomeStage,groundH,polyPoint,INLET,FALL,RB,get mode(){return mode;}};
+if(DEBUG)window.__mz={oldApple,setTimeScale:(v)=>{timeScale=v;},debugComplete,barrier,orchDist,depthAt,PROLOGUE,interact,piece,storyRetro,lampTalk,lampEnd,storyReady,LS,lsW,get story(){return S.story;},renderPieces,HOME,ORCH,HERO,mill,BRIDGES,SIGN,PATHS,BUILDINGS,POND_R,setStageInstant,setJ:(o,p)=>setJournal(o,p),scrap,renderScrap,showPane:typeof showPane==='function'?showPane:null,get boatRun(){return boatRun;},WEAVE,weaveNext,launchBoat,reedBoat,spawnSight,SPECIES_BY_ID,setJournal:typeof setJournal==="function"?setJournal:null,scene,FALLS,TP,S,cam,player,teleport,setHomeStage,groundH,polyPoint,INLET,FALL,RB,get mode(){return mode;}};
 function toggleDebug(force){
   const el=$('debug');const on=force!==undefined?force:el.hidden;el.hidden=!on;$('fps').hidden=!on;
   if(on)renderQualityUI();
@@ -4773,7 +4807,7 @@ export const MZ={THREE,HOOKS,scene,camera,renderer,canvas,player,cam,S,keys,INTE
   fxSoft,fxGlow,hud,talk,photo,
   $,clamp,lerp,smooth,damp,rr,rnd,ease,angWrap,
   groundH,walkH,depthAt,polyPoint,polyInfo,makeToon,boxM,cylM,addOutline,toast,showCardBrief,startCine,after,sparkle,puff,addRipple,auSwell,
-  writeSave,stage,teleport,completeProject,piece,hasPiece,setBarrierOpen,keyDown,ORCH,oldApple,brambles,stumps,oStage,press,oda,W,applyWardrobe,renderValleyPane,BANDS,scrap,
+  writeSave,stage,teleport,completeProject,piece,hasPiece,setBarrierOpen,keyDown,ORCH,oldApple,PROLOGUE,BARRIER,orchDist,orchLeafMat,brambles,stumps,oStage,press,oda,W,applyWardrobe,renderValleyPane,BANDS,scrap,
   shower(sec){showerT=Math.max(showerT,sec);},
   get mode(){return mode;},get cine(){return cine;},get simTime(){return simTime;},get journalOpen(){return journalOpen;},get sandbox(){return sandbox;},
   get nightF(){return nightF;},get goldF(){return goldF;},get hours(){return S.hours;},get SEASON(){return SEASON;},get levelCur(){return levelCur;},get decorOn(){return decor.on;},
