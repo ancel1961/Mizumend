@@ -13,7 +13,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { MZ } from './game.js';
-const {HOOKS,player,S,PARAMS,makeToon,clamp,damp,G,renderer} = MZ;
+const {HOOKS,player,S,PARAMS,makeToon,clamp,damp,lerp,G,renderer} = MZ;
 
 const URL_GLB = 'assets/aoi.glb';
 const URL_B64 = 'assets/aoi.b64.txt';   /* the same file as base64 text, for hosts that don't serve .glb (the claude.ai artifact) */
@@ -264,7 +264,8 @@ function heroPose(dt) {
   for (const [A, s] of [[aR0, 'r'], [aL0, 'l']]) {
     const x = A.rotation.x, y = -A.rotation.y, z = -A.rotation.z;
     const up = Math.abs(z) > 1.4 || x < -2.0;
-    const elbow = up ? 0.12 : 0.16 + Math.max(0, -x) * 0.42 + k * 0.25;
+    const elbow0 = up ? 0.12 : 0.16 + Math.max(0, -x) * 0.42 + k * 0.25;
+    const ae = HERO.aimElbow, elbow = lerp(elbow0, ae ? ae[s === 'r' ? 0 : 1] : 0.06, HERO.aimK || 0);   /* straight arms when she aims a handgun; a long gun or the bow sets its own (js/arsenal.js) */
     inc('upperarm_' + s, x, y, z);
     inc('lowerarm_' + s, -elbow, 0, 0);
     restBone('hand_' + s);

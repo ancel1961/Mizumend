@@ -518,13 +518,14 @@ function mendDone(){const k=koi;k.state='mended';k.active=false;ui.boss.hidden=t
 
 /* ---------- input ---------- */
 const canvas=MZ.canvas;
-canvas.addEventListener('mousedown',e=>{if(MZ.mode!=='play')return;if(e.button===0&&document.pointerLockElement===canvas){if(CB.mend){mendPress();return;}strike();}if(e.button===2){e.preventDefault();flareStart();}});
+const AR=()=>!!(MZ.arsenal&&MZ.arsenal.ranged());   /* v13.2: with a gun, bow or throwable in hand, the mouse buttons aim and fire (js/arsenal.js) */
+canvas.addEventListener('mousedown',e=>{if(MZ.mode!=='play')return;if(e.button===0&&document.pointerLockElement===canvas){if(CB.mend){mendPress();return;}if(AR())return;strike();}if(e.button===2){e.preventDefault();if(AR())return;flareStart();}});
 window.addEventListener('mouseup',e=>{if(e.button===2)flareRelease();});
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
 window.addEventListener('keydown',e=>{if(MZ.mode!=='play'||e.repeat)return;
   if(CB.mend&&(e.code==='KeyE'||e.code==='Space')){e.preventDefault();mendPress();return;}
   if(MZ.decorOn||MZ.journalOpen||MZ.photo.on||MZ.talk.on)return;
-  if(e.code==='KeyF')strike();else if(e.code==='KeyR')flareStart();else if(e.code==='KeyQ')slingAimStart();else if(e.code==='ShiftLeft'||e.code==='ShiftRight')CB.shiftAt=performance.now();});
+  if(e.code==='KeyF')strike();else if(e.code==='KeyR'){if(!AR())flareStart();}else if(e.code==='KeyQ')slingAimStart();else if(e.code==='ShiftLeft'||e.code==='ShiftRight')CB.shiftAt=performance.now();});
 window.addEventListener('keyup',e=>{if(e.code==='KeyR')flareRelease();if(e.code==='KeyQ')slingAimRelease();if((e.code==='ShiftLeft'||e.code==='ShiftRight')&&CB.shiftAt>0){if(performance.now()-CB.shiftAt<190)dodge();CB.shiftAt=-1;}});
 /* touch: a left stick, and buttons on the right */
 const touch={on:false,id:null,ox:0,oy:0,keys:new Set()};
@@ -618,6 +619,6 @@ HOOKS.project.push(()=>{});
 let lastSync=-1;HOOKS.sim.push(()=>{const key=(S.blight&&S.blight.koi?1:0)+stage()*2;if(key===lastSync)return;lastSync=key;if(!S.blight||typeof S.blight!=='object')S.blight={koi:false};if(!koi.active&&koi.state!=='swim'&&koi.state!=='mended')koiReset();});
 
 HOOKS.bossActive=()=>(koi.active&&koi.state!=='asleep')||!!CB.otherBoss;
-MZ.combat={GLOW_TEX,CB,gear,koi,spawnEnemy,koiStart,mendPress,strike,dodge,flareStart,flareRelease,setDiff,hurt,targets,mendStart,popEnemy,feel,popText,tip,nearMissCheck,spit,shockwave,clearHazards,slingFire,slingPick,slingables,hasSling,hasLantern,D,ui,KNOT,KNOT_HOT,MUCK,MOSS,glowMat,renderBossBar:null,removeEnemy};
+MZ.combat={GLOW_TEX,CB,gear,SWING,active,koi,spawnEnemy,koiStart,mendPress,strike,dodge,flareStart,flareRelease,setDiff,hurt,targets,mendStart,popEnemy,feel,popText,tip,nearMissCheck,spit,shockwave,clearHazards,slingFire,slingPick,slingables,hasSling,hasLantern,D,ui,KNOT,KNOT_HOT,MUCK,MOSS,glowMat,renderBossBar:null,removeEnemy};
 if(PARAMS.debug==="1"||PARAMS.debug==="true")window.__mzc=Object.assign(MZ.combat,{CB,koi,spawnEnemy,koiStart,mendPress,strike,dodge,flareStart,flareRelease,setDiff,hurt,targets,mendStart,
   koiMendNow:()=>{if(!koi.active)koiStart();mendDone();},washAshore,slingAimStart,slingAimRelease});

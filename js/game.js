@@ -4729,7 +4729,7 @@ function startGame(){
   setTimeout(()=>{$('hint').classList.add('gone');},30000);
   /* v13: a module (the Kawashita prologue) can take over the opening; then the usual arrival toasts wait for it */
   if(HOOKS.onStart.some(f=>f())){return;}
-  if(!sandbox&&(S.news|0)<13&&(S.kawa|0)===1&&!(MZ.kawa&&MZ.kawa.on)){const back=S.visitDays>1||stage()>0;const was=S.news|0;S.news=13;if(back)setTimeout(()=>toast(was<12?'The valley fights back now, and the Old Orchard has a story of its own. See What\'s new in your journal (J).':'Aoi looks like herself now, the pond has its creatures back, and new games begin downriver in Kawashita (Play the Kawashita prologue, on the title screen). See What\'s new (J).'),6500);}
+  if(!sandbox&&(S.news|0)<14&&(S.kawa|0)===1&&!(MZ.kawa&&MZ.kawa.on)){const back=S.visitDays>1||stage()>0;const was=S.news|0;S.news=14;if(back)setTimeout(()=>toast(was<12?'The valley fights back now, and the Old Orchard has a story of its own. See What\'s new in your journal (J).':was<13?'Aoi looks like herself now, the pond has its creatures back, and new games begin downriver in Kawashita (Play the Kawashita prologue, on the title screen). See What\'s new (J).':'Kiyo\'s revolver works now, and Toma is on his way upriver. See What\'s new (J).'),6500);}
   if(welcomeMsg)setTimeout(()=>toast(welcomeMsg),1800);
   else if(S.visitDays<=1&&S.gifts.length&&!sandbox)setTimeout(()=>toast('The flood left a few things on the shore. Look for the glints.'),2200);
   writeSave();
@@ -4826,7 +4826,7 @@ export const MZ={THREE,HOOKS,scene,camera,renderer,canvas,player,cam,S,keys,INTE
   fxSoft,fxGlow,hud,talk,photo,
   $,clamp,lerp,smooth,damp,rr,rnd,ease,angWrap,
   groundH,walkH,depthAt,polyPoint,polyInfo,makeToon,boxM,cylM,addOutline,toast,showCardBrief,startCine,after,sparkle,puff,addRipple,auSwell,
-  writeSave,stage,teleport,bakeStatic,talkRun,talkEnd,setSeason,pickWeather,realSeason,SEASON_PARAM,WEATHER_PARAM,startGame,completeProject,piece,hasPiece,setBarrierOpen,keyDown,ORCH,oldApple,PROLOGUE,BARRIER,orchDist,orchLeafMat,brambles,stumps,oStage,press,oda,W,applyWardrobe,renderValleyPane,BANDS,scrap,
+  writeSave,stage,teleport,bakeStatic,mill,dock,cottage,talkRun,talkEnd,setSeason,pickWeather,realSeason,SEASON_PARAM,WEATHER_PARAM,startGame,completeProject,piece,hasPiece,setBarrierOpen,keyDown,ORCH,oldApple,PROLOGUE,BARRIER,orchDist,orchLeafMat,brambles,stumps,oStage,press,oda,W,applyWardrobe,renderValleyPane,BANDS,scrap,
   shower(sec){showerT=Math.max(showerT,sec);},
   get mode(){return mode;},set mode(v){mode=v;},get HOUR_PARAM(){return HOUR_PARAM;},get cine(){return cine;},get simTime(){return simTime;},get journalOpen(){return journalOpen;},get sandbox(){return sandbox;},
   get nightF(){return nightF;},get goldF(){return goldF;},get iceN(){return waterU.uIceN.value;},POND_R,onBridge,get hours(){return S.hours;},get SEASON(){return SEASON;},get levelCur(){return levelCur;},get decorOn(){return decor.on;},
