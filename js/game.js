@@ -8,7 +8,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const $ = (id) => document.getElementById(id);
 /* Systems in other modules (combat, and later co-op) plug in here instead of reaching into this file */
-const HOOKS={sim:[],vis:[],pose:[],project:[],pileBlocked:null,sluiceBlocked:null,brambleBlocked:null,cuttingsBlocked:null,boot:[],bossActive:null,safeSpot:null,bootWait:[]};   /* v13: bootWait holds promises (Aoi's model) the start button waits for */
+const HOOKS={sim:[],vis:[],pose:[],project:[],pileBlocked:null,sluiceBlocked:null,brambleBlocked:null,cuttingsBlocked:null,boot:[],bossActive:null,safeSpot:null,bootWait:[],onStart:[],farGround:null,farDepth:null,farWalk:null,farStep:null,clockHold:null,noSave:null};   /* v13: bootWait holds promises (Aoi's model) the start button waits for */
 let showerT=0;
 let hitStop=0,timeScale=1;
 function showError(msg){ const el=$('err'); el.textContent=msg; el.hidden=false; }
@@ -145,6 +145,7 @@ HOME_H=rawHeight(HOME.x,HOME.z);
 const HGRID=new Float32Array(NV*NV);
 for(let j=0;j<NV;j++)for(let i=0;i<NV;i++)HGRID[j*NV+i]=rawHeight(-HALF+i*CELL,-HALF+j*CELL);
 function groundH(x,z){
+  if(z>600&&HOOKS.farGround)return HOOKS.farGround(x,z);   /* v13: Kawashita, far downriver, has its own ground */
   const fx=clamp((x+HALF)/CELL,0,SEG-1e-4),fz=clamp((z+HALF)/CELL,0,SEG-1e-4);
   const i=Math.floor(fx),j=Math.floor(fz),u=fx-i,v=fz-j;
   const a=HGRID[j*NV+i],b=HGRID[j*NV+i+1],c=HGRID[(j+1)*NV+i],d=HGRID[(j+1)*NV+i+1];
@@ -170,8 +171,8 @@ function bridgeDeck(x,z){
   return best;
 }
 function homeFloor(x,z){const l=homeL(x,z);return Math.abs(l.x)<3.5&&Math.abs(l.z)<2.8?HOME_H+0.26:-1e9;}
-function walkH(x,z){return Math.max(groundH(x,z),bridgeDeck(x,z),homeFloor(x,z));}
-function onBridge(x,z){const b=bridgeDeck(x,z);return b>-1e8&&b>groundH(x,z)-0.05;}
+function walkH(x,z){if(z>600)return HOOKS.farWalk?HOOKS.farWalk(x,z):groundH(x,z);return Math.max(groundH(x,z),bridgeDeck(x,z),homeFloor(x,z));}
+function onBridge(x,z){if(z>600)return false;const b=bridgeDeck(x,z);return b>-1e8&&b>groundH(x,z)-0.05;}
 
 /* ================================================================
    Renderer, scene, quality tiers
@@ -1876,7 +1877,7 @@ function setMuted(m){AU.muted=m;if(AU.master&&AU.ctx)AU.master.gain.setTargetAtT
 const SAVE_KEY='rebuild-the-valley:mill-pond:v1';
 const S={hours:8.5,inv:{wood:0,stone:0,reed:0,cut:0},sight:{butterflies:false,ducks:false,birds:false,fireflies:false,fish:false},errands:{},muted:false,
   lastDay:null,visitDays:0,daily:null,gifts:[],keepsakes:[],col:{},notes:[],cosmetics:{},wearing:'straw',gameDay:0,cutTaken:0,decor:[],stored:{},
-  home:0,plots:null,crops:{},ciders:{},earned:{},gather:{},reed:{bw:[false,false,false,false,false],cut:[],woven:{},floated:false},news:0,story:null,blight:{koi:false},harvests:0,photos:0,applePick:{},spirits:{cleared:[],left:{}}};
+  home:0,plots:null,crops:{},ciders:{},earned:{},gather:{},reed:{bw:[false,false,false,false,false],cut:[],woven:{},floated:false},news:0,story:null,blight:{koi:false},harvests:0,photos:0,applePick:{},spirits:{cleared:[],left:{}},kawa:0,arsenal:{have:{},up:{}}};
 function stage(){if(!piles.every(p=>p.cleared))return 0;if(!sluice.built)return 1;if(!SPOTS.every(s=>s.planted))return 2;return 3;}
 function oStage(){if(stage()<3)return -1;if(!brambles.every(b=>b.cleared))return 0;if(!chanSegs.every(c=>c.fixedOK))return 1;if(!stumps.every(s=>s.planted))return 2;if(!press.fixedOK)return 3;return 4;}
 function restorationPct(){const p=piles.filter(x=>x.cleared).length*5;const s=sluice.built?35:0;const r=SPOTS.filter(x=>x.planted).length*4.375;return Math.round(p+s+r);}
@@ -1907,9 +1908,9 @@ function serialize(){
     brambles:brambles.map(b=>b.cleared),heaps:stoneHeaps.map(h=>h.left),chan:chanSegs.map(c=>c.fixedOK),stumps:stumps.map(s=>s.planted),
     lastDay:S.lastDay,visitDays:S.visitDays,daily:S.daily,gifts:S.gifts,keepsakes:S.keepsakes,col:S.col,notes:S.notes,cosmetics:S.cosmetics,wearing:S.wearing,gameDay:S.gameDay,cutTaken:S.cutTaken,
     press:press.fixedOK,oda:{met:oda.met,lastDay:oda.lastDay},decor:S.decor,stored:S.stored,
-    home:S.home,plots:S.plots,crops:S.crops,ciders:S.ciders,earned:S.earned,gather:S.gather,reed:S.reed,harvests:S.harvests,photos:S.photos,applePick:S.applePick,mira:{met:mira.met,lastDay:mira.lastDay},news:S.news,story:S.story,blight:S.blight,spirits:S.spirits};
+    home:S.home,plots:S.plots,crops:S.crops,ciders:S.ciders,earned:S.earned,gather:S.gather,reed:S.reed,harvests:S.harvests,photos:S.photos,applePick:S.applePick,mira:{met:mira.met,lastDay:mira.lastDay},news:S.news,story:S.story,blight:S.blight,spirits:S.spirits,kawa:S.kawa,arsenal:S.arsenal};
 }
-function writeSave(){if(sandbox)return;try{localStorage.setItem(SAVE_KEY,JSON.stringify(serialize()));}catch(e){}}
+function writeSave(){if(sandbox)return;if(HOOKS.noSave&&HOOKS.noSave())return;try{localStorage.setItem(SAVE_KEY,JSON.stringify(serialize()));}catch(e){}}
 function validSave(d){return !!(d&&typeof d==='object'&&(d.v===1||d.v===2||d.v===3||d.v===4));}
 function readSave(){try{const s=localStorage.getItem(SAVE_KEY);if(!s)return null;const d=JSON.parse(s);return validSave(d)?d:null;}catch(e){return null;}}
 function clearSave(){try{localStorage.removeItem(SAVE_KEY);}catch(e){}}
@@ -1962,6 +1963,11 @@ function applySave(d){
   S.news=Number.isFinite(d.news)?d.news|0:0;
   S.blight={};for(const k of ['koi','koiRe','bramble','sling','swing','tin','crow','shower'])S.blight[k]=!!(d.blight&&d.blight[k]);
   /* v13: mended spirits per pile (saves from v12 and earlier simply have none yet) */
+  /* v13: saves from before the Kawashita prologue count it as played; the arsenal starts empty */
+  S.kawa=d.kawa===undefined?1:(d.kawa|0);
+  {const a=d.arsenal&&typeof d.arsenal==='object'?d.arsenal:{};S.arsenal={have:{},up:{}};
+   if(a.have&&typeof a.have==='object')for(const k in a.have)if(/^[a-z0-9_]{1,24}$/.test(k))S.arsenal.have[k]=a.have[k]|0;
+   if(a.up&&typeof a.up==='object')for(const k in a.up)if(/^[a-z0-9_]{1,24}$/.test(k)&&a.up[k]&&typeof a.up[k]==='object'){S.arsenal.up[k]={};for(const u in a.up[k])if(/^[a-z]{1,16}$/.test(u))S.arsenal.up[k][u]=Math.max(0,Math.min(5,a.up[k][u]|0));}}
   {const sp=d.spirits&&typeof d.spirits==='object'?d.spirits:{};S.spirits={cleared:Array.isArray(sp.cleared)?sp.cleared.filter(n=>Number.isInteger(n)&&n>=0&&n<64):[],left:{}};
    if(sp.left&&typeof sp.left==='object')for(const k in sp.left){const v=sp.left[k];if(/^\d+$/.test(k)&&Array.isArray(v))S.spirits.left[k]=v.filter(t=>t==='wisp'||t==='moth').slice(0,8);}}
   S.story=null;if(d.story&&typeof d.story==='object'){const t=d.story;S.story={f:{},seen:{},gate:!!t.gate,done:!!t.done,gc:!!t.gc,fest:Number.isFinite(t.fest)?t.fest|0:-1,pick:['a','b','c'].includes(t.pick)?t.pick:null};
@@ -3006,9 +3012,12 @@ function talkStart(){
   talk.who='oda';talk.on=true;talk.i=0;oda.nod=0.8;$('talk').hidden=false;$('talkWho').textContent='Mr. Oda';$('talkLine').textContent=talk.lines[0];SFX.page();dailyEvent('oda');
   if(document.pointerLockElement)document.exitPointerLock();
 }
-function talkNext(){talk.i++;if(talk.i>=talk.lines.length){talkEnd();return;}$('talkLine').textContent=talk.lines[talk.i];oda.nod=0.6;if(talk.who==='sachi')sachi.nod=0.6;SFX.rustle();}
-function talkEnd(){if(!talk.on)return;talk.on=false;$('talk').hidden=true;const f=talk.onEnd;talk.onEnd=null;if(f)f();canvas.focus({preventScroll:true});}
-$('talk').addEventListener('click',()=>talkNext());
+function talkShow(){const L=talk.lines[talk.i];if(L&&typeof L==='object'){$('talkWho').textContent=L.who||'';$('talkLine').textContent=L.text||'';$('talk').classList.toggle('narr',!L.who);if(L.fn)L.fn();}else $('talkLine').textContent=L;}
+function talkNext(){if(talk.hold)return;talk.i++;if(talk.i>=talk.lines.length){talkEnd();return;}{const L=talk.lines[talk.i];talk.hold=!!(L&&typeof L==='object'&&L.hold);}talkShow();oda.nod=0.6;if(talk.who==='sachi')sachi.nod=0.6;SFX.rustle();}
+/* v13: a scene's dialogue: lines are {who, text, fn}; a line with hold:true waits until talk.hold is cleared */
+function talkRun(lines,onEnd,who='story'){talk.lines=lines;talk.i=0;talk.who=who;talk.on=true;talk.onEnd=onEnd||null;talk.hold=!!(lines[0]&&lines[0].hold);$('talk').hidden=false;talkShow();SFX.page();}
+function talkEnd(){if(!talk.on)return;talk.on=false;talk.hold=false;$('talk').hidden=true;$('talk').classList.remove('narr');const f=talk.onEnd;talk.onEnd=null;if(f)f();canvas.focus({preventScroll:true});}
+$('talk').addEventListener('click',()=>{if(talk.hold&&talk.onHoldKey)talk.onHoldKey();else talkNext();});
 function renderLetters(){const nm=mira.met;$('jLettersMH').hidden=nm===0;$('jLettersM').hidden=nm===0;$('jLettersM').innerHTML=MIRA_LETTERS.slice(0,nm).map(t=>`<li>${escapeHTML(t)}</li>`).join('');const n=oda.met;$('jLettersH').hidden=n===0;$('jLetters').hidden=n===0;$('jLetters').innerHTML=ODA_LETTERS.slice(0,n).concat(S.story&&S.story.done?[rim().oda]:[]).map(t=>`<li>${escapeHTML(t)}</li>`).join('');}
 
 /* ================================================================
@@ -4112,7 +4121,7 @@ window.addEventListener('keydown',(e)=>{
     if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
     keys.add(e.code);return;
   }
-  if(talk.on){if(['KeyE','Space','Enter'].includes(e.code)&&!e.repeat){e.preventDefault();talkNext();}else if(e.code==='Escape')talkEnd();return;}
+  if(talk.on){if(['KeyE','Space','Enter'].includes(e.code)&&!e.repeat){e.preventDefault();if(talk.hold&&talk.onHoldKey)talk.onHoldKey();else talkNext();}else if(e.code==='Escape'&&talk.who!=='story')talkEnd();return;}
   if(e.code==='Tab'){e.preventDefault();if(!e.repeat){tabPeek=!tabPeek;applyHudMode();}return;}
   if(e.code==='KeyJ'){e.preventDefault();if(!e.repeat){if(decor.on)decorClose();setJournal(!journalOpen);}return;}
   if(e.code==='KeyB'&&!e.repeat&&!journalOpen&&!cine){if(decor.on)decorClose();else decorOpen();return;}
@@ -4168,6 +4177,7 @@ const MOON=new THREE.Color(0.55,0.66,1.0),NIGHT_AMB=new THREE.Color(0.3,0.42,0.8
 
 function advanceClock(dt){
   if(cine&&cine.warp)return;
+  if(HOOKS.clockHold&&HOOKS.clockHold())return;
   const h=S.hours+dt/(mode==='play'?20:60);
   if(h>=24){S.hours=h-24;S.gameDay++;pickWeather();layoutGather();layoutRbReeds();}else S.hours=h;
 }
@@ -4269,10 +4279,11 @@ function blocked(x,z){
   for(const c of COLLIDERS){if(c.on&&!c.on())continue;if(Math.hypot(x-c.x,z-c.z)<c.r+0.32)return true;}
   return false;
 }
-function onIce(x,z){return waterU.uIceN.value>0.6&&!onBridge(x,z)&&levelCur-groundH(x,z)>0.02;}
-function depthAt(x,z){if(onBridge(x,z))return 0;return levelCur-groundH(x,z);}
+function onIce(x,z){if(z>600)return false;return waterU.uIceN.value>0.6&&!onBridge(x,z)&&levelCur-groundH(x,z)>0.02;}
+function depthAt(x,z){if(z>600&&HOOKS.farDepth)return HOOKS.farDepth(x,z);if(onBridge(x,z))return 0;return levelCur-groundH(x,z);}
 function canStep(fx,fz,tx,tz){
   if(blocked(tx,tz))return false;
+  if(tz>600&&HOOKS.farStep){const r=HOOKS.farStep(fx,fz,tx,tz);if(r!==null)return r;}
   if(oStage()<4&&rbDist(tx,tz)<27&&rbDist(fx,fz)>=27){if(simTime-gateHintT>8){gateHintT=simTime;toast('A fence and thick mist close the path upstream. Perhaps once the cider press turns again.');}return false;}
   if((stage()<3||PROLOGUE)&&orchDist(tx,tz)<24&&orchDist(fx,fz)>=24){if(simTime-gateHintT>8){gateHintT=simTime;toast(PROLOGUE&&stage()>=3?'The orchard lane is where the full game begins. Thank you for playing the prologue.':'Brambles choke the way up to the old orchard. Restore Mill Pond first.');}return false;}
   if(!(S.story&&S.story.gate)&&lsDist(tx,tz)<7.0&&lsDist(fx,fz)>=7.0){if(simTime-gateHintT>8){gateHintT=simTime;toast(hasPiece('window')?'The garden gate is latched. Inside, the lamp is burning, as it always is.':'A low garden gate, latched. A lamp burns in the window.');}return false;}
@@ -4716,7 +4727,9 @@ function startGame(){
   cam.target.copy(player.pos);cam.target.y+=1.25;
   canvas.focus({preventScroll:true});
   setTimeout(()=>{$('hint').classList.add('gone');},30000);
-  if(!sandbox&&(S.news|0)<13){const back=S.visitDays>1||stage()>0;const was=S.news|0;S.news=13;if(back)setTimeout(()=>toast(was<12?'The valley fights back now, and the Old Orchard has a story of its own. See What\'s new in your journal (J).':'Aoi looks like herself now, and the pond has its creatures back. See What\'s new in your journal (J).'),6500);}
+  /* v13: a module (the Kawashita prologue) can take over the opening; then the usual arrival toasts wait for it */
+  if(HOOKS.onStart.some(f=>f())){return;}
+  if(!sandbox&&(S.news|0)<13&&(S.kawa|0)===1&&!(MZ.kawa&&MZ.kawa.on)){const back=S.visitDays>1||stage()>0;const was=S.news|0;S.news=13;if(back)setTimeout(()=>toast(was<12?'The valley fights back now, and the Old Orchard has a story of its own. See What\'s new in your journal (J).':'Aoi looks like herself now, the pond has its creatures back, and new games begin downriver in Kawashita (Play the Kawashita prologue, on the title screen). See What\'s new (J).'),6500);}
   if(welcomeMsg)setTimeout(()=>toast(welcomeMsg),1800);
   else if(S.visitDays<=1&&S.gifts.length&&!sandbox)setTimeout(()=>toast('The flood left a few things on the shore. Look for the glints.'),2200);
   writeSave();
@@ -4813,9 +4826,9 @@ export const MZ={THREE,HOOKS,scene,camera,renderer,canvas,player,cam,S,keys,INTE
   fxSoft,fxGlow,hud,talk,photo,
   $,clamp,lerp,smooth,damp,rr,rnd,ease,angWrap,
   groundH,walkH,depthAt,polyPoint,polyInfo,makeToon,boxM,cylM,addOutline,toast,showCardBrief,startCine,after,sparkle,puff,addRipple,auSwell,
-  writeSave,stage,teleport,completeProject,piece,hasPiece,setBarrierOpen,keyDown,ORCH,oldApple,PROLOGUE,BARRIER,orchDist,orchLeafMat,brambles,stumps,oStage,press,oda,W,applyWardrobe,renderValleyPane,BANDS,scrap,
+  writeSave,stage,teleport,bakeStatic,talkRun,talkEnd,setSeason,pickWeather,realSeason,SEASON_PARAM,WEATHER_PARAM,startGame,completeProject,piece,hasPiece,setBarrierOpen,keyDown,ORCH,oldApple,PROLOGUE,BARRIER,orchDist,orchLeafMat,brambles,stumps,oStage,press,oda,W,applyWardrobe,renderValleyPane,BANDS,scrap,
   shower(sec){showerT=Math.max(showerT,sec);},
-  get mode(){return mode;},get cine(){return cine;},get simTime(){return simTime;},get journalOpen(){return journalOpen;},get sandbox(){return sandbox;},
+  get mode(){return mode;},set mode(v){mode=v;},get HOUR_PARAM(){return HOUR_PARAM;},get cine(){return cine;},get simTime(){return simTime;},get journalOpen(){return journalOpen;},get sandbox(){return sandbox;},
   get nightF(){return nightF;},get goldF(){return goldF;},get iceN(){return waterU.uIceN.value;},POND_R,onBridge,get hours(){return S.hours;},get SEASON(){return SEASON;},get levelCur(){return levelCur;},get decorOn(){return decor.on;},
   set hitStop(v){hitStop=Math.max(hitStop,v);},set timeScale(v){timeScale=v;},get timeScale(){return timeScale;},
   pressE(down){if(down){keys.add('KeyE');tapUntil.KeyE=simTime+0.12;ePressN++;}else keys.delete('KeyE');},

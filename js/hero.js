@@ -222,7 +222,7 @@ function heroPose(dt) {
   const p = player, t = G.uTime.value, k = p.speedK || 0;
   const body = p.body, [aR0, aL0] = [p.arms[1], p.arms[0]], [lL0, lR0] = [p.legs[0], p.legs[1]];
   /* the old figure's arms[1] (+x) held the staff and the rod: mirrored, that's her right hand */
-  HERO.wrap.visible = true;
+  HERO.wrap.visible = !HERO.hidden;            /* a scene can hide her (a memory she isn't in) */
   player.hat.visible = false;
   player.fhat.visible = S.wearing === 'founder' && !!S.cosmetics?.founderHat;
   /* body: bob, squash and the dodge roll go on the wrapper (the roll pivots at her hips); lean goes into her spine */
