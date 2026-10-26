@@ -2,3 +2,5 @@
 import './game.js';
 import './combat.js';
 import './orchard.js';
+import './hero.js';
+import './wildlife.js';

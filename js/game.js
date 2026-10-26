@@ -8,7 +8,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const $ = (id) => document.getElementById(id);
 /* Systems in other modules (combat, and later co-op) plug in here instead of reaching into this file */
-const HOOKS={sim:[],vis:[],pose:[],project:[],pileBlocked:null,sluiceBlocked:null,brambleBlocked:null,cuttingsBlocked:null,boot:[],bossActive:null,safeSpot:null};
+const HOOKS={sim:[],vis:[],pose:[],project:[],pileBlocked:null,sluiceBlocked:null,brambleBlocked:null,cuttingsBlocked:null,boot:[],bossActive:null,safeSpot:null,bootWait:[]};   /* v13: bootWait holds promises (Aoi's model) the start button waits for */
 let showerT=0;
 let hitStop=0,timeScale=1;
 function showError(msg){ const el=$('err'); el.textContent=msg; el.hidden=false; }
@@ -1862,7 +1862,11 @@ Object.assign(SFX,{
   plop(){if(!AU.ctx)return;const t=AU.ctx.currentTime;auOsc('sine',520,t,0.002,0.02,0.12,0.06,AU.sfx,{glideTo:1100,glideT:0.08});},
   tick(n){if(!AU.ctx)return;chime(74+n*2,AU.ctx.currentTime,0.05);},
   reel(){if(!AU.ctx)return;const t=AU.ctx.currentTime;for(let i=0;i<5;i++)auNoiseBurst(t+i*0.035,0.02,'bandpass',3200,3,0.03);},
-  shutter(){if(!AU.ctx)return;const t=AU.ctx.currentTime;auNoiseBurst(t,0.04,'highpass',3000,0.7,0.12);auNoiseBurst(t+0.07,0.05,'highpass',2500,0.7,0.09);}
+  shutter(){if(!AU.ctx)return;const t=AU.ctx.currentTime;auNoiseBurst(t,0.04,'highpass',3000,0.7,0.12);auNoiseBurst(t+0.07,0.05,'highpass',2500,0.7,0.09);},
+  /* v13 wildlife */
+  croak(pan=0){if(!AU.ctx)return;const t=AU.ctx.currentTime;const f=rr(150,210);auOsc('sawtooth',f,t,0.01,0.07,0.06,0.03,AU.amb,{lp:800,glideTo:f*0.8,glideT:0.12,pan});auOsc('sawtooth',f*1.05,t+0.15,0.01,0.06,0.05,0.025,AU.amb,{lp:750,glideTo:f*0.78,glideT:0.1,pan});},
+  heron(pan=0){if(!AU.ctx)return;const t=AU.ctx.currentTime;auOsc('sawtooth',360,t,0.01,0.12,0.12,0.035,AU.amb,{lp:1400,q:3,glideTo:210,glideT:0.22,pan});auNoiseBurst(t,0.2,'bandpass',900,1.4,0.02);},
+  wings(){if(!AU.ctx)return;const t=AU.ctx.currentTime;for(let i=0;i<4;i++)auNoiseBurst(t+i*0.16,0.09,'lowpass',500,0.8,0.05);}
 });
 function setMuted(m){AU.muted=m;if(AU.master&&AU.ctx)AU.master.gain.setTargetAtTime(m?0:0.9,AU.ctx.currentTime,0.1);$('btnSound').textContent=m?'Sound: off':'Sound: on';}
 
@@ -3688,7 +3692,7 @@ const THEORIES=[{k:'a',t:'Was it my grandmother at the gate? Someone from this c
 function storyInit(){if(!S.story||typeof S.story!=='object')S.story={};const s=S.story;if(!s.f||typeof s.f!=='object')s.f={};if(!s.seen||typeof s.seen!=='object')s.seen={};s.gate=!!s.gate;s.done=!!s.done;s.gc=!!s.gc;if(!Number.isFinite(s.fest))s.fest=-1;if(!('pick' in s))s.pick=null;s.f.notice=s.f.notice||1;s.seen.notice=true;}
 function hasPiece(id){return !!(S.story&&S.story.f[id]);}
 function piece(id,quiet){storyInit();if(hasPiece(id)||!PIECE_BY_ID[id])return false;S.story.f[id]=(S.gameDay|0)+1;S.story.seen[id]=false;
-  if(!quiet){after(quiet===false?0:1.2,()=>{toast(`A new piece for your journal: ${PIECE_BY_ID[id].t} (J)`);SFX.page();});}
+  if(!quiet){after(quiet===false?0:1.2,()=>{toast(`A new piece for your journal: ${PIECE_BY_ID[id].t} (J)`);SFX.page();MZ.hero?.expr?.('sad',0.55,4.5);});}
   storyGateClimax(quiet);writeSave();if(journalOpen&&jPane==='pPieces')renderPieces();return true;}
 function storyGateClimax(quiet){const s=S.story;if(s.gc||!hasPiece('gate')||!hasPiece('bell'))return;s.gc=true;
   if(!quiet)after(5,()=>{showCardBrief({k:'Pieces',t:'What happened at the gate',s:'Someone turned the sluice by hand that night, and the village below was spared. But who were the bottle notes written to?'});SFX.moment();auSwell();});}
@@ -4712,7 +4716,7 @@ function startGame(){
   cam.target.copy(player.pos);cam.target.y+=1.25;
   canvas.focus({preventScroll:true});
   setTimeout(()=>{$('hint').classList.add('gone');},30000);
-  if(!sandbox&&(S.news|0)<12){const back=S.visitDays>1||stage()>0;S.news=12;if(back)setTimeout(()=>toast('The valley fights back now, and the Old Orchard has a story of its own. See What\'s new in your journal (J).'),6500);}
+  if(!sandbox&&(S.news|0)<13){const back=S.visitDays>1||stage()>0;const was=S.news|0;S.news=13;if(back)setTimeout(()=>toast(was<12?'The valley fights back now, and the Old Orchard has a story of its own. See What\'s new in your journal (J).':'Aoi looks like herself now, and the pond has its creatures back. See What\'s new in your journal (J).'),6500);}
   if(welcomeMsg)setTimeout(()=>toast(welcomeMsg),1800);
   else if(S.visitDays<=1&&S.gifts.length&&!sandbox)setTimeout(()=>toast('The flood left a few things on the shore. Look for the glints.'),2200);
   writeSave();
@@ -4739,7 +4743,10 @@ function boot(hotData){
   for(let i=0;i<3;i++)fishSpotsStep(0);
   if(DEBUG)toggleDebug(true);
   updateHUD();
-  const b=$('btnStart');b.disabled=false;b.textContent=STATE_PARAM!==null?`Begin at stage ${STATE_PARAM}`:saved?'Continue':'New Game';
+  const b=$('btnStart');const startLabel=STATE_PARAM!==null?`Begin at stage ${STATE_PARAM}`:saved?'Continue':'New Game';
+  /* v13: the other modules register what the start has to wait for (Aoi's model) in the same tick, so check after it */
+  b.disabled=true;b.textContent='Waking Aoi…';
+  setTimeout(()=>{Promise.all(HOOKS.bootWait).catch(()=>{}).then(()=>{b.disabled=false;b.textContent=startLabel;b.focus({preventScroll:true});});},0);
   if(saved){
     const nb=$('btnNew');nb.hidden=false;let arm=false;
     nb.addEventListener('click',()=>{if(!arm){arm=true;nb.textContent='Tap again to erase this valley';nb.classList.add('warn');setTimeout(()=>{arm=false;nb.textContent='Start over';nb.classList.remove('warn');},4000);return;}clearSave();location.reload();});
@@ -4747,7 +4754,6 @@ function boot(hotData){
   }
   if(STATE_PARAM!==null)$('titleNote').textContent='Test start · progress in this run is not saved';
   b.addEventListener('click',startGame);
-  b.focus({preventScroll:true});
 }
 
 window.claude?.hot?.snapshot?.(()=>serialize());
@@ -4810,7 +4816,7 @@ export const MZ={THREE,HOOKS,scene,camera,renderer,canvas,player,cam,S,keys,INTE
   writeSave,stage,teleport,completeProject,piece,hasPiece,setBarrierOpen,keyDown,ORCH,oldApple,PROLOGUE,BARRIER,orchDist,orchLeafMat,brambles,stumps,oStage,press,oda,W,applyWardrobe,renderValleyPane,BANDS,scrap,
   shower(sec){showerT=Math.max(showerT,sec);},
   get mode(){return mode;},get cine(){return cine;},get simTime(){return simTime;},get journalOpen(){return journalOpen;},get sandbox(){return sandbox;},
-  get nightF(){return nightF;},get goldF(){return goldF;},get hours(){return S.hours;},get SEASON(){return SEASON;},get levelCur(){return levelCur;},get decorOn(){return decor.on;},
+  get nightF(){return nightF;},get goldF(){return goldF;},get iceN(){return waterU.uIceN.value;},POND_R,onBridge,get hours(){return S.hours;},get SEASON(){return SEASON;},get levelCur(){return levelCur;},get decorOn(){return decor.on;},
   set hitStop(v){hitStop=Math.max(hitStop,v);},set timeScale(v){timeScale=v;},get timeScale(){return timeScale;},
   pressE(down){if(down){keys.add('KeyE');tapUntil.KeyE=simTime+0.12;ePressN++;}else keys.delete('KeyE');},
   jump(){jumpQ=simTime+0.2;},

@@ -209,7 +209,8 @@ function releasedStep(dt){for(let i=released.length-1;i>=0;i--){const r=released
       if(rnd()<dt*10)fxGlow.emit(e.g.position.x,e.g.position.y+0.4,e.g.position.z,0,-0.3,0,MOTE,0.07,0.7,0,0.5,0);
       e.g.scale.setScalar(Math.max(0.01,1-Math.max(0,k-2)*0.8));}
     if(r.t>3.2){scene.remove(e.g);released.splice(i,1);}}}
-function pocketCleared(i){CB.pockets.delete(i);CB.cleared.add(i);if(!S.spirits.cleared.includes(i))S.spirits.cleared.push(i);delete S.spirits.left[i];writeSave();
+function pocketCleared(i){if(CB.cleared.has(i))return;   /* v13: several spirits mended in one moment each asked; say it once */
+  CB.pockets.delete(i);CB.cleared.add(i);if(!S.spirits.cleared.includes(i))S.spirits.cleared.push(i);delete S.spirits.left[i];writeSave();
   const p=piles[i];if(p){sparkle(p.x,groundH(p.x,p.z)+1,p.z,16);auSwell();toast('The spirits are mended and the pile is free. Hold E to clear it.');}}
 function removeEnemy(e,checkPocket){scene.remove(e.g);e.dead=true;const i=CB.enemies.indexOf(e);if(i>=0)CB.enemies.splice(i,1);}
 function enemyStep(e,dt){
@@ -617,6 +618,6 @@ HOOKS.project.push(()=>{});
 let lastSync=-1;HOOKS.sim.push(()=>{const key=(S.blight&&S.blight.koi?1:0)+stage()*2;if(key===lastSync)return;lastSync=key;if(!S.blight||typeof S.blight!=='object')S.blight={koi:false};if(!koi.active&&koi.state!=='swim'&&koi.state!=='mended')koiReset();});
 
 HOOKS.bossActive=()=>(koi.active&&koi.state!=='asleep')||!!CB.otherBoss;
-MZ.combat={GLOW_TEX,CB,koi,spawnEnemy,koiStart,mendPress,strike,dodge,flareStart,flareRelease,setDiff,hurt,targets,mendStart,popEnemy,feel,popText,tip,nearMissCheck,spit,shockwave,clearHazards,slingFire,slingPick,slingables,hasSling,hasLantern,D,ui,KNOT,KNOT_HOT,MUCK,MOSS,glowMat,renderBossBar:null,removeEnemy};
+MZ.combat={GLOW_TEX,CB,gear,koi,spawnEnemy,koiStart,mendPress,strike,dodge,flareStart,flareRelease,setDiff,hurt,targets,mendStart,popEnemy,feel,popText,tip,nearMissCheck,spit,shockwave,clearHazards,slingFire,slingPick,slingables,hasSling,hasLantern,D,ui,KNOT,KNOT_HOT,MUCK,MOSS,glowMat,renderBossBar:null,removeEnemy};
 if(PARAMS.debug==="1"||PARAMS.debug==="true")window.__mzc=Object.assign(MZ.combat,{CB,koi,spawnEnemy,koiStart,mendPress,strike,dodge,flareStart,flareRelease,setDiff,hurt,targets,mendStart,
   koiMendNow:()=>{if(!koi.active)koiStart();mendDone();},washAshore,slingAimStart,slingAimRelease});
