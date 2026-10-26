@@ -790,7 +790,7 @@ HOOKS.sim.push((dt) => {
 
 /* ---------- the opening: a new game starts here ---------- */
 let forceKawa = false;
-const want = () => forceKawa || (PARAMS.kawa === '1') || (!MZ.sandbox && (S.kawa | 0) === 0 && PARAMS.kawa !== '0' && !PARAMS.state);
+const want = () => forceKawa || (PARAMS.kawa === '1') || (!MZ.sandbox && (S.kawa | 0) === 0 && PARAMS.kawa !== '0' && !PARAMS.state && !PARAMS.tp);
 /* a returning player can play the new prologue without losing their valley: it ends on Mill Pond's south shore */
 setTimeout(() => {
   if ((S.kawa | 0) !== 1 || MZ.sandbox) return;

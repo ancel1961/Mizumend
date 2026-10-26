@@ -52,7 +52,15 @@ const MEM = {
   silenced: ['The orchard\'s gamekeeper kept the crows off the young trees without waking the house.', 'The trees grew. The house is gone.'],
   hammer: ['Toma swears he lost this hammer in Kawashita.', 'He didn\'t lose it. He left it where you would find it.'],
   smoke: ['Toma\'s signal kit: smoke for "come and find me", a flash for "stay where you are".'],
+  /* Chapter 2, the Upper Marsh */
+  double: ['The farmhouse on the marsh kept it by the door for foxes, and fired it once a year at New Year, to wake the ducks.', 'The ducks came back every spring. The farmhouse didn\'t.'],
+  machete: ['The reedcutters cleared the channels every autumn, singing the cutting song in two parts across the water.', 'One boat sang the question and the other sang the answer. There is nobody left to sing the answer.'],
+  exarrow: ['Fire-arrows for the festival, wrapped in waxed reed and kept dry in the shrine under the willow.', 'One went up every summer, so the first boat would know where to go.'],
+  bow: ['Mira\'s grandmother was the festival archer. Every summer she stood on the reed island and sent one lit arrow out over the water.', 'The first boat followed it home. Nobody has drawn this bow since the flood.'],
 };
+/* things that aren't held but change what is held */
+const FIRE_ARROWS = 6;
+const EXTRA = { exarrow: { name: 'Festival fire-arrows', kind: 'ammo', card: 'Your arrows burst into light now. The bow is on 5.' } };
 const A = { eq: 'staff', slotPick: {}, mag: {}, stock: {}, cool: 0, reloadT: -1, aim: false, aimK: 0, draw: -1, fovBase: null, tipShown: {}, shots: [], fx: [], traps: [] };
 MZ.arsenal = A;
 if (PARAMS.debug === '1' || PARAMS.debug === 'true') window.__mza = A;
@@ -103,6 +111,7 @@ function model(id) {
     case 'machete': part(g, bx(0.03, 0.12, 0.035), MT.wood, 0, 0.0, 0); part(g, bx(0.006, 0.5, 0.06), MT.blade, 0, -0.3, 0.012); break;
   }
   if (WEAP[id]?.kind === 'gun' && !WEAP[id].two) g.scale.setScalar(1.35);      /* handguns read better a touch large */
+  g.traverse((o) => o.layers.enableAll());                                         /* seen in the prologue's and the marsh's camera layers too */
   return { g, muzzle };
 }
 const MODELS = {};
@@ -162,7 +171,7 @@ function hudStep(dt) {
   const show = MZ.mode === 'play' && !MZ.kawa?.on && (A.eq !== 'staff' || hudShowT > 0) && !MZ.cine;
   ui.hud.hidden = !show; if (!show) return;
   const st = stat(A.eq);
-  const ammo = w.kind === 'gun' ? (A.reloadT >= 0 ? 'Reloading…' : `${A.mag[A.eq] ?? st.mag} / ${st.mag}`) : w.kind === 'throw' ? `${A.stock[A.eq] ?? 0} left` : w.kind === 'bow' ? (A.draw >= 0 ? 'Drawing…' : 'Hold click to draw') : 'Click to strike';
+  const ammo = w.kind === 'gun' ? (A.reloadT >= 0 ? 'Reloading…' : `${A.mag[A.eq] ?? st.mag} / ${st.mag}`) : w.kind === 'throw' ? `${A.stock[A.eq] ?? 0} left` : w.kind === 'bow' ? (A.draw >= 0 ? 'Drawing…' : 'Hold click to draw') + (ar().have.exarrow ? ` · ${A.stock.exarrow | 0} fire-arrows` : '') : 'Click to strike';
   const slots = [1, 2, 3, 4, 5, 6].map((n) => { const own = Object.keys(WEAP).some((id) => WEAP[id].slot === n && has(id)); return `<i class="${own ? 'own' : ''}${WEAP[A.eq].slot === n ? ' on' : ''}">${n}</i>`; }).join('');
   const k = A.eq + '|' + ammo + '|' + slots;
   if (k !== hudKey) { hudKey = k; ui.hud.innerHTML = `<div class="nm">${w.name}</div><div class="am">${ammo}</div><div class="sl">${slots}</div>`; }
@@ -309,10 +318,14 @@ function reload() {
 function loose() {
   const w = WEAP.bow; const k = clamp(A.draw / w.draw, 0.2, 1); A.draw = -1; if (!MZ.combat?.active?.()) return;
   aimRay(); muzzleWorld(_m);
-  const v = _d.clone().multiplyScalar(18 + 30 * k); v.y += 1.2;
-  const arrow = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.7, 4), MT.wood); arrow.castShadow = true; scene.add(arrow);
-  const tip = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.06, 4), ar().have.exarrow ? MT.cloth : MT.steel); tip.position.y = 0.37; arrow.add(tip);
-  A.shots.push({ kind: 'arrow', m: arrow, p: _m.clone(), v, dmg: stat('bow').dmg * k, ex: !!ar().have.exarrow, t: 0 });
+  /* fly from her hand to the point under the reticle (the camera is off to one side of her hand) */
+  const hitR = raycastTargets(_o, _d, 60); const aimPt = _o.clone().addScaledVector(_d, Math.min(hitR.dist, 60));
+  const v = aimPt.sub(_m).normalize().multiplyScalar(18 + 30 * k); v.y += 0.6;
+  /* fire-arrows from the shrine burst into light where they land; there are only so many (Toma's bench refills them) */
+  const ex = !!ar().have.exarrow && (A.stock.exarrow | 0) > 0; if (ex) A.stock.exarrow--;
+  const arrow = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.7, 4), MT.wood); arrow.castShadow = true; scene.add(arrow); arrow.layers.enableAll();
+  const tip = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.06, 4), ex ? MT.cloth : MT.steel); tip.position.y = 0.37; arrow.add(tip); tip.layers.enableAll();
+  A.shots.push({ kind: 'arrow', m: arrow, p: _m.clone(), v, dmg: stat('bow').dmg * k, ex, t: 0 });
   bang('throw');
 }
 /* ---------- throwing ---------- */
@@ -454,7 +467,8 @@ async function memory(id, where) {
   ui.mem.classList.add('on'); $('letterbox').classList.add('on');
   await new Promise((res) => MZ.talkRun(lines.map((t) => ({ who: '', text: t })), res));
   ui.mem.classList.remove('on'); $('letterbox').classList.remove('on');
-  showCardBrief({ k: 'Found · ' + where, t: WEAP[id].name, s: WEAP[id].kind === 'throw' ? 'In your satchel. Press 6 to hold it.' : `Press ${WEAP[id].slot} to hold it.` });
+  const w = WEAP[id] || EXTRA[id];
+  showCardBrief({ k: 'Found · ' + where, t: w.name, s: w.card || (w.kind === 'throw' ? 'In your satchel. Press 6 to hold it.' : `Press ${w.slot} to hold it.`) });
 }
 function give(id, where, silent) {
   const a = ar(); if (a.have[id]) return false; a.have[id] = 1;
@@ -498,7 +512,7 @@ const TOMA_AT = { x: BENCH.x + 0.2, z: BENCH.z + 1.0 };
 let toma = null, tomaArrive = false;
 const reedBoat = (() => {
   const g = new THREE.Group(); scene.add(g); g.visible = false;
-  const reed = makeToon(0xb89a5a, { noHeal: true, rim: 0.4, tag: 'reedboat' }), bind = makeToon(0x6a4a2a, { noHeal: true });
+  const reed = makeToon(0x9a8558, { noHeal: true, rim: 0.16, tag: 'reedboat' }), bind = makeToon(0x5a3e24, { noHeal: true });   /* dried reed, not straw-yellow */
   for (const sx of [-0.32, 0, 0.32]) { const b = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 2.6, 4, 8), reed); b.rotation.x = Math.PI / 2; b.position.set(sx, sx === 0 ? -0.08 : 0, 0); b.scale.set(1, 1, 0.8); b.castShadow = true; g.add(b); addOutline(b, 0.012); }
   for (const z of [-1.0, -0.3, 0.4, 1.1]) { const r = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.025, 5, 14), bind); r.position.z = z; r.scale.set(1.2, 0.7, 1); g.add(r); }
   const prow = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.7, 7), reed); prow.rotation.x = -Math.PI / 2 + 0.5; prow.position.set(0, 0.25, 1.8); g.add(prow);
@@ -514,10 +528,15 @@ const bench = (() => {
   const lan = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.2, 0.14), makeToon(0xffe6b0, { emissive: 0xffb35c, noHeal: true, tag: 'benchlan' })); lan.position.set(0.85, 1.2, 0.2); g.add(lan);
   return g;
 })();
-function tomaPlace() {
+function tomaPlace(force) {
   if (!ar().have.toma_bench) return;
   bench.visible = true; reedBoat.visible = true;
-  const bz = DOCK.g.position.z - 5.5; reedBoat.position.set(DOCK.g.position.x + 1.5, MZ.levelCur + 0.05, bz); reedBoat.rotation.y = 0.1;
+  /* the boat stays where she left it (js/boat.js), unless it's being sent home */
+  if (force || !MZ.boat?.away) {
+    /* moored off the end of the dock, wherever the water is deep enough for it at the pond's current level */
+    let bx = DOCK.g.position.x + 1.5, bz = DOCK.g.position.z - 5.5;
+    for (let i = 0; i < 60 && MZ.depthAt(bx, bz) < 0.6; i++) { const l = Math.hypot(bx, bz) || 1; bx -= bx / l * 0.5; bz -= bz / l * 0.5; }
+    reedBoat.position.set(bx, MZ.levelCur + 0.05, bz); reedBoat.rotation.set(0, 0.1, 0.05); if (MZ.boat) { MZ.boat.away = false; MZ.boat.x = reedBoat.position.x; MZ.boat.z = reedBoat.position.z; MZ.boat.yaw = 0.1; } }
   if (toma) { toma.g.visible = true; toma.place(TOMA_AT.x, MZ.walkH(TOMA_AT.x, TOMA_AT.z), TOMA_AT.z, Math.atan2(BENCH.x - TOMA_AT.x, BENCH.z - TOMA_AT.z)); toma.P.hold = 0.7; toma.P.lean = 0.25; }
 }
 async function tomaLoad() { if (toma) return toma; try { toma = await loadCast('toma'); } catch (e) { console.warn('toma', e); } return toma; }
@@ -564,7 +583,7 @@ HOOKS.sim.push((dt) => {
   if (a.have.toma_bench && !toma && !A.tomaLoading) { A.tomaLoading = true; tomaLoad().then(() => tomaPlace()); }
   if (toma && toma.g.visible) { const d = Math.hypot(player.pos.x - TOMA_AT.x, player.pos.z - TOMA_AT.z); if (d > 6 && !MZ.talk.on) { toma.P.look = null; toma.P.hold = 0.7; toma.P.lean = 0.25; } }
 });
-HOOKS.vis.push((dt) => { if (toma && toma.g.visible && !MZ.kawa?.on) toma.update(dt); if (reedBoat.visible && ar().have.toma_bench) { reedBoat.position.y = MZ.levelCur + 0.05 + Math.sin(G.uTime.value * 1.1) * 0.02; } });
+HOOKS.vis.push((dt) => { if (toma && toma.g.visible && !MZ.kawa?.on) toma.update(dt); if (reedBoat.visible && ar().have.toma_bench && !MZ.boat?.on && !(MZ.boat?.away && reedBoat.position.z > 2000)) { reedBoat.position.y = MZ.levelCur + 0.05 + Math.sin(G.uTime.value * 1.1) * 0.02; } });
 
 /* ---------- the bench ---------- */
 const TRACKS = { gun: [['dmg', 'Lamp-shot strength'], ['mag', 'Holds more'], ['rel', 'Quicker reload'], ['stab', 'Steadier']], melee: [['dmg', 'Heavier']], bow: [['dmg', 'A stronger draw']], throw: [] };
@@ -578,14 +597,14 @@ function openBench() {
       return `<button class="pbtn" type="button" data-up="${id}|${k}" ${can ? '' : 'disabled'}>${label} ${'●'.repeat(L)}${'○'.repeat(3 - L)}${L < 3 ? ` · ${c.wood} wood, ${c.stone} stone${c.reed ? `, ${c.reed} reed` : ''}` : ' · done'}</button>`; }).join('')}</div></div>`; }).join('');
   ui.bench.innerHTML = `<h2>Toma's bench</h2><p class="qnote">"Bring me wood and stone and I'll make it better. Reed for the fiddly bits." · You have ${inv.wood} wood, ${inv.stone} stone, ${inv.reed | 0} reed.</p>
     ${rows || '<p class="qnote">Nothing to work on yet.</p>'}
-    <div class="w"><b>Throwables</b><p class="qnote">Lamp oil ${A.stock.molotov | 0} · smoke ${A.stock.smoke | 0} · stun ${A.stock.stun | 0}</p><div class="row"><button class="pbtn" type="button" data-refill="1">Fill the satchel (free)</button></div></div>
+    <div class="w"><b>Throwables</b><p class="qnote">Lamp oil ${A.stock.molotov | 0} · smoke ${A.stock.smoke | 0} · stun ${A.stock.stun | 0}${ar().have.exarrow ? ` · fire-arrows ${A.stock.exarrow | 0}` : ''}</p><div class="row"><button class="pbtn" type="button" data-refill="1">Fill the satchel (free)</button></div></div>
     <div class="row" style="margin-top:10px"><button class="pbtn" type="button" data-close="1">Done · Esc</button></div>`;
   ui.bench.hidden = false; A.benchOpen = true;
 }
 ui.bench.addEventListener('click', (e) => {
   const b = e.target.closest('button'); if (!b) return;
   if (b.dataset.close) { closeBench(); return; }
-  if (b.dataset.refill) { for (const id of ['molotov', 'smoke', 'stun', 'trap']) if (ar().have[id]) A.stock[id] = WEAP[id].stock; SFX.get?.(); openBench(); return; }
+  if (b.dataset.refill) { for (const id of ['molotov', 'smoke', 'stun', 'trap']) if (ar().have[id]) A.stock[id] = WEAP[id].stock; if (ar().have.exarrow) A.stock.exarrow = FIRE_ARROWS; SFX.get?.(); openBench(); return; }
   if (b.dataset.up) { const [id, k] = b.dataset.up.split('|'); const L = up(id, k); const c = cost(L); const inv = S.inv;
     if (L >= 3 || inv.wood < c.wood || inv.stone < c.stone || (inv.reed | 0) < c.reed) return;
     inv.wood -= c.wood; inv.stone -= c.stone; inv.reed = (inv.reed | 0) - c.reed;
@@ -600,9 +619,10 @@ setTimeout(() => {
   const a = ar();
   if (a.have.revolver && !a.have.knife) a.have.knife = 1;                     /* both were in Kiyo's ferry box */
   for (const id of ['molotov', 'smoke', 'stun', 'trap']) if (a.have[id] && A.stock[id] === undefined) A.stock[id] = WEAP[id].stock;
+  if (a.have.exarrow && A.stock.exarrow === undefined) A.stock.exarrow = FIRE_ARROWS;
   if (a.have.toma_bench) { tomaLoad().then(() => tomaPlace()); }
 }, 0);
 /* the prologue's ferry box gave the revolver; it also held her net knife */
 HOOKS.sim.push(() => { const a = ar(); if (a.have.revolver && !a.have.knife) { a.have.knife = 1; } });
-A.loose = loose; A.memory = memory; A.closeBench = closeBench;
+A.loose = loose; A.memory = memory; A.closeBench = closeBench; A.reedBoat = reedBoat; A.tomaPlace = tomaPlace;
 A.equip = equip; A.pick = pick; A.fire = fire; A.reload = reload; A.WEAP = WEAP; A.stat = stat; A.tomaArrival = tomaArrival; A.openBench = openBench; A.effectAt = effectAt;

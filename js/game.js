@@ -8,7 +8,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const $ = (id) => document.getElementById(id);
 /* Systems in other modules (combat, and later co-op) plug in here instead of reaching into this file */
-const HOOKS={sim:[],vis:[],pose:[],project:[],pileBlocked:null,sluiceBlocked:null,brambleBlocked:null,cuttingsBlocked:null,boot:[],bossActive:null,safeSpot:null,bootWait:[],onStart:[],farGround:null,farDepth:null,farWalk:null,farStep:null,clockHold:null,noSave:null};   /* v13: bootWait holds promises (Aoi's model) the start button waits for */
+const HOOKS={sim:[],vis:[],pose:[],project:[],pileBlocked:null,sluiceBlocked:null,brambleBlocked:null,cuttingsBlocked:null,boot:[],bossActive:null,safeSpot:null,bootWait:[],onStart:[],farGround:null,farDepth:null,farWalk:null,farStep:null,ride:null,area:null,tasksUp:null,clockHold:null,noSave:null};   /* v13: bootWait holds promises (Aoi's model) the start button waits for */
 let showerT=0;
 let hitStop=0,timeScale=1;
 function showError(msg){ const el=$('err'); el.textContent=msg; el.hidden=false; }
@@ -37,7 +37,7 @@ const PARAMS=(()=>{
   const out={};
   try{const q=new URLSearchParams(location.search);for(const [k,v] of q)out[k.toLowerCase()]=v;}catch(e){}
   try{const h=decodeURIComponent((location.hash||'').slice(1));
-    for(const tok of h.split(/[-,&;+]+/)){if(!tok)continue;const kv=tok.split('=');if(kv.length===2){out[kv[0].toLowerCase()]=kv[1];continue;}
+    for(const tok of h.split(/[-,&;+]+/)){if(!tok)continue;const kv=tok.split(/[=:]/);if(kv.length===2){out[kv[0].toLowerCase()]=kv[1];continue;}
       const m=tok.match(/^([a-z]+)(\d*)$/i);if(m)out[m[1].toLowerCase()]=m[2]===''?'1':m[2];}}catch(e){}
   return out;
 })();
@@ -1908,7 +1908,7 @@ function serialize(){
     brambles:brambles.map(b=>b.cleared),heaps:stoneHeaps.map(h=>h.left),chan:chanSegs.map(c=>c.fixedOK),stumps:stumps.map(s=>s.planted),
     lastDay:S.lastDay,visitDays:S.visitDays,daily:S.daily,gifts:S.gifts,keepsakes:S.keepsakes,col:S.col,notes:S.notes,cosmetics:S.cosmetics,wearing:S.wearing,gameDay:S.gameDay,cutTaken:S.cutTaken,
     press:press.fixedOK,oda:{met:oda.met,lastDay:oda.lastDay},decor:S.decor,stored:S.stored,
-    home:S.home,plots:S.plots,crops:S.crops,ciders:S.ciders,earned:S.earned,gather:S.gather,reed:S.reed,harvests:S.harvests,photos:S.photos,applePick:S.applePick,mira:{met:mira.met,lastDay:mira.lastDay},news:S.news,story:S.story,blight:S.blight,spirits:S.spirits,kawa:S.kawa,arsenal:S.arsenal};
+    home:S.home,plots:S.plots,crops:S.crops,ciders:S.ciders,earned:S.earned,gather:S.gather,reed:S.reed,harvests:S.harvests,photos:S.photos,applePick:S.applePick,mira:{met:mira.met,lastDay:mira.lastDay},news:S.news,story:S.story,blight:S.blight,spirits:S.spirits,kawa:S.kawa,arsenal:S.arsenal,up:S.up,boatTip:S.boatTip|0};
 }
 function writeSave(){if(sandbox)return;if(HOOKS.noSave&&HOOKS.noSave())return;try{localStorage.setItem(SAVE_KEY,JSON.stringify(serialize()));}catch(e){}}
 function validSave(d){return !!(d&&typeof d==='object'&&(d.v===1||d.v===2||d.v===3||d.v===4));}
@@ -1968,6 +1968,8 @@ function applySave(d){
   {const a=d.arsenal&&typeof d.arsenal==='object'?d.arsenal:{};S.arsenal={have:{},up:{}};
    if(a.have&&typeof a.have==='object')for(const k in a.have)if(/^[a-z0-9_]{1,24}$/.test(k))S.arsenal.have[k]=a.have[k]|0;
    if(a.up&&typeof a.up==='object')for(const k in a.up)if(/^[a-z0-9_]{1,24}$/.test(k)&&a.up[k]&&typeof a.up[k]==='object'){S.arsenal.up[k]={};for(const u in a.up[k])if(/^[a-z]{1,16}$/.test(u))S.arsenal.up[k][u]=Math.max(0,Math.min(5,a.up[k][u]|0));}}
+  /* v13.3: the Upper Marsh (Chapter 2): still pools, secrets, races, the heron, whether she was up there */
+  {const u=d.up&&typeof d.up==='object'?d.up:{};S.up={still:[0,1,2].map(i=>Array.isArray(u.still)&&u.still[i]?1:0),sec:(u.sec|0)&7,races:(u.races|0)&3,heron:u.heron?1:0,mira:u.mira?1:0,note:u.note?1:0,in:u.in?1:0,stillTip:u.stillTip?1:0,heronTip:u.heronTip?1:0};S.boatTip=d.boatTip?1:0;}
   {const sp=d.spirits&&typeof d.spirits==='object'?d.spirits:{};S.spirits={cleared:Array.isArray(sp.cleared)?sp.cleared.filter(n=>Number.isInteger(n)&&n>=0&&n<64):[],left:{}};
    if(sp.left&&typeof sp.left==='object')for(const k in sp.left){const v=sp.left[k];if(/^\d+$/.test(k)&&Array.isArray(v))S.spirits.left[k]=v.filter(t=>t==='wisp'||t==='moth').slice(0,8);}}
   S.story=null;if(d.story&&typeof d.story==='object'){const t=d.story;S.story={f:{},seen:{},gate:!!t.gate,done:!!t.done,gc:!!t.gc,fest:Number.isFinite(t.fest)?t.fest|0:-1,pick:['a','b','c'].includes(t.pick)?t.pick:null};
@@ -2099,6 +2101,7 @@ const ARROW='<svg viewBox="0 0 16 16" aria-hidden="true" style="transform:rotate
 const DOT='<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.5"/></svg>';
 function relAngleDeg(x,z){const dx=x-player.pos.x,dz=z-player.pos.z;const world=Math.atan2(dx,dz);const camF=Math.atan2(-Math.sin(cam.yaw),-Math.cos(cam.yaw));return Math.round(angWrap(camF-world)*180/Math.PI);}
 function taskList(){
+  {const up=HOOKS.tasksUp?HOOKS.tasksUp():null;if(up)return up.map(t=>t.x!==undefined?{...t,d:Math.hypot(t.x-player.pos.x,t.z-player.pos.z)}:t);}
   const out=[];const prim=primaryTargets();const groups=new Map();
   for(const t of prim){if(!groups.has(t.label))groups.set(t.label,[]);groups.get(t.label).push(t);}
   for(const [label,list] of groups){const n=nearestOf(list);out.push({main:true,text:label+(list.length>1?` · ${list.length} left`:''),x:n.t.x,z:n.t.z,d:n.d});}
@@ -2115,9 +2118,10 @@ function updateTasks(){
 }
 function updateHUD(){
   const px0=player.pos.x,pz0=player.pos.z;const orch=inOrchard(),rbA=rbDist(px0,pz0)<30,hm=homeDist(px0,pz0)<12;
-  const area=rbA?'The Reedbeds':orch?'Old Orchard':hm?'The mill cottage':'Mill Pond';const pct=rbA?Math.max(0,rbPct()):orch?orchardPct():hm?Math.round(hStage()*100/3):restorationPct();
+  const ov=HOOKS.area?HOOKS.area():null;
+  const area=ov?ov.name:rbA?'The Reedbeds':orch?'Old Orchard':hm?'The mill cottage':'Mill Pond';const pct=ov?ov.pct:rbA?Math.max(0,rbPct()):orch?orchardPct():hm?Math.round(hStage()*100/3):restorationPct();
   if(pct!==hud.pct||area!==hud.area){hud.pct=pct;hud.area=area;$('pctNum').textContent=pct+'%';$('meterFill').style.width=pct+'%';$('place').textContent=area;
-    $('pctUnit').textContent=orch&&oStage()<0?'restored · opens after Mill Pond':rbA&&rbStage()<0?'restored · opens after the cider press':'restored';}
+    $('pctUnit').textContent=ov?ov.unit:orch&&oStage()<0?'restored · opens after Mill Pond':rbA&&rbStage()<0?'restored · opens after the cider press':'restored';}
   const inv=`${S.inv.wood}|${S.inv.stone}|${S.inv.reed}|${S.inv.cut}`;
   if(inv!==hud.inv){const [w,s,r,c]=hud.inv?hud.inv.split('|').map(Number):[0,0,0,0];hud.inv=inv;$('invWood').textContent=S.inv.wood;$('invStone').textContent=S.inv.stone;$('invReed').textContent=S.inv.reed;$('invCut').textContent=S.inv.cut;
     if(S.inv.wood!==w)bump('slotWood');if(S.inv.stone!==s)bump('slotStone');if(S.inv.reed!==r)bump('slotReed');if(S.inv.cut!==c)bump('slotCut');
@@ -3681,7 +3685,9 @@ const STORY_TEXT={
  "fest": "Tonight is the boat festival. Little lit boats on the water, for everyone who ever came home."
 };
 const PIECES=[
-  {id:'notice',t:'The notice',w:'You arrived with it',x:'THE MILL COTTAGE, free to anyone who will mend it. Typed, unsigned, and posted to you at your rooms in Kawashita. Nobody else in Kawashita seems to have had one.',g:''},
+  {id:'notice',t:'Kiyo\'s basket',w:'You arrived with it',x:'Kiyo\'s last request: "Take it home. Upriver." A worn reed basket, lopsided, older than you are. You have carried things in it all your life and never once looked closely at the rim.',g:''},
+  {id:'marsh',t:'The still places',w:'The Upper Marsh',x:'Three places where the water had stopped: a bank where someone waited, a house with every clock stopped, a room kept exactly as it was. Mira says the still water keeps things. It kept them until something moved.',g:''},
+  {id:'heron',t:'A heron at dusk',w:'The Upper Marsh · the old post',x:'Kiyo said herons are ferrymen who forgot how to stop working. This one flew upriver, toward the gorge, as if it had somewhere to be.',g:'a'},
   {id:'lantern',t:'A soot-black lantern',w:'Mill Pond · in the flood debris',x:'The handle is a heron, its neck bent to hold the ring. The glass is cracked, but someone had trimmed the wick short, as if they meant to light it again.',g:'a'},
   {id:'gate',t:'Scratches on the gate wheel',w:'Mill Pond · the rebuilt sluice',x:'Knife marks gouged into the old sluice wheel, deep and hurried, and a date: 9 · VI. The wheel was turned by hand, from the gate itself.',g:'ac'},
   {id:'notes',t:'The bottle notes',w:'Mill Pond · washed up on the shore',x:'They are never signed. Most are written to "my small one". Whoever writes them sends them down from somewhere upstream.',g:'b'},
@@ -4295,6 +4301,7 @@ function canStep(fx,fz,tx,tz){
 }
 function hs0(p){return Math.hypot(p.vel.x,p.vel.z);}
 function playerStep(dt){
+  if(HOOKS.ride&&HOOKS.ride(dt))return;          /* v13.3: in the reed boat (js/boat.js) */
   const p=player;
   let ix=0,iz=0;
   const control=mode==='play'&&!cine&&!journalOpen&&!photo.on&&FISH.state==='idle'&&!talk.on;
@@ -4729,7 +4736,7 @@ function startGame(){
   setTimeout(()=>{$('hint').classList.add('gone');},30000);
   /* v13: a module (the Kawashita prologue) can take over the opening; then the usual arrival toasts wait for it */
   if(HOOKS.onStart.some(f=>f())){return;}
-  if(!sandbox&&(S.news|0)<14&&(S.kawa|0)===1&&!(MZ.kawa&&MZ.kawa.on)){const back=S.visitDays>1||stage()>0;const was=S.news|0;S.news=14;if(back)setTimeout(()=>toast(was<12?'The valley fights back now, and the Old Orchard has a story of its own. See What\'s new in your journal (J).':was<13?'Aoi looks like herself now, the pond has its creatures back, and new games begin downriver in Kawashita (Play the Kawashita prologue, on the title screen). See What\'s new (J).':'Kiyo\'s revolver works now, and Toma is on his way upriver. See What\'s new (J).'),6500);}
+  if(!sandbox&&(S.news|0)<15&&(S.kawa|0)===1&&!(MZ.kawa&&MZ.kawa.on)){const back=S.visitDays>1||stage()>0;const was=S.news|0;S.news=15;if(back)setTimeout(()=>toast(was<12?'The valley fights back now, and the Old Orchard has a story of its own. See What\'s new in your journal (J).':was<13?'Aoi looks like herself now, the pond has its creatures back, and new games begin downriver in Kawashita (Play the Kawashita prologue, on the title screen). See What\'s new (J).':was<14?'Kiyo\'s revolver works now, and Toma is on his way upriver. See What\'s new (J).':'Chapter 2 is open: once the Reedbeds boardwalk is mended, Toma\'s reed boat will take you up the marsh. See What\'s new (J).'),6500);}
   if(welcomeMsg)setTimeout(()=>toast(welcomeMsg),1800);
   else if(S.visitDays<=1&&S.gifts.length&&!sandbox)setTimeout(()=>toast('The flood left a few things on the shore. Look for the glints.'),2200);
   writeSave();
@@ -4822,7 +4829,7 @@ requestAnimationFrame(frame);
 /* ================================================================
    The shared context other modules use (combat now; co-op later)
    ================================================================ */
-export const MZ={THREE,HOOKS,scene,camera,renderer,canvas,player,cam,S,keys,INTERACTS,piles,sluice,OUTLET,SLUICE_S,LEVELS,PARAMS,G,SFX,AU,
+export const MZ={THREE,HOOKS,waterU,GLSL:{NOISE:NOISE_GLSL,COMMON:COMMON_GLSL,OUT:OUT_GLSL},reedGeo,reedMat,prep,makeSightModel,SPECIES_BY_ID,brushTexture,rbStage,RB,RPATH,INLET,scene,camera,renderer,canvas,player,cam,S,keys,INTERACTS,piles,sluice,OUTLET,SLUICE_S,LEVELS,PARAMS,G,SFX,AU,
   fxSoft,fxGlow,hud,talk,photo,
   $,clamp,lerp,smooth,damp,rr,rnd,ease,angWrap,
   groundH,walkH,depthAt,polyPoint,polyInfo,makeToon,boxM,cylM,addOutline,toast,showCardBrief,startCine,after,sparkle,puff,addRipple,auSwell,
