@@ -16,6 +16,14 @@ import { MZ } from './game.js';
 const {HOOKS,player,S,PARAMS,makeToon,clamp,damp,G,renderer} = MZ;
 
 const URL_GLB = 'assets/aoi.glb';
+const URL_B64 = 'assets/aoi.b64.txt';   /* the same file as base64 text, for hosts that don't serve .glb (the claude.ai artifact) */
+async function loadModel() {
+  try { const r = await fetch(URL_GLB); if (r.ok) { const b = await r.arrayBuffer(); if (b.byteLength > 1000 && new DataView(b).getUint32(0, true) === 0x46546C67) return b; } } catch (e) {}
+  const r = await fetch(URL_B64); if (!r.ok) throw new Error('no model (' + r.status + ')');
+  const txt = (await r.text()).replace(/\s+/g, ''), bin = atob(txt), out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out.buffer;
+}
 const SCALE = 0.94;            /* 1.58 m: she stands a little taller than the villagers without towering over the props */
 const OFF = PARAMS.chibi === '1' || PARAMS.hero === '0';
 const HERO = { ready: false, failed: false, off: OFF, root: null, wrap: null, bones: {}, morphs: [], anchors: {}, ex: {}, one: null, mood: null };
@@ -330,7 +338,7 @@ if (!OFF) {
   HOOKS.bootWait.push(new Promise((res) => {
     const done = (ok) => { clearTimeout(timer); res(ok); };
     const timer = setTimeout(() => { HERO.failed = true; console.warn('Aoi took too long to load; using the old figure'); res(false); }, 45000);
-    new GLTFLoader().load(URL_GLB, (g) => { try { setup(g); done(true); } catch (e) { console.error(e); HERO.failed = true; done(false); } },
-      undefined, (e) => { console.warn('Aoi could not load (' + (e?.message || e) + '); using the old figure'); HERO.failed = true; done(false); });
+    const fail = (e) => { console.warn('Aoi could not load (' + (e?.message || e) + '); using the old figure'); HERO.failed = true; done(false); };
+    loadModel().then((buf) => new GLTFLoader().parse(buf, '', (g) => { try { setup(g); done(true); } catch (e) { console.error(e); HERO.failed = true; done(false); } }, fail)).catch(fail);
   }));
 }
