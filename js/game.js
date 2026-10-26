@@ -1969,7 +1969,8 @@ function applySave(d){
    if(a.have&&typeof a.have==='object')for(const k in a.have)if(/^[a-z0-9_]{1,24}$/.test(k))S.arsenal.have[k]=a.have[k]|0;
    if(a.up&&typeof a.up==='object')for(const k in a.up)if(/^[a-z0-9_]{1,24}$/.test(k)&&a.up[k]&&typeof a.up[k]==='object'){S.arsenal.up[k]={};for(const u in a.up[k])if(/^[a-z]{1,16}$/.test(u))S.arsenal.up[k][u]=Math.max(0,Math.min(5,a.up[k][u]|0));}}
   /* v13.3: the Upper Marsh (Chapter 2): still pools, secrets, races, the heron, whether she was up there */
-  {const u=d.up&&typeof d.up==='object'?d.up:{};S.up={still:[0,1,2].map(i=>Array.isArray(u.still)&&u.still[i]?1:0),sec:(u.sec|0)&7,races:(u.races|0)&3,heron:u.heron?1:0,mira:u.mira?1:0,note:u.note?1:0,in:u.in?1:0,stillTip:u.stillTip?1:0,heronTip:u.heronTip?1:0};S.boatTip=d.boatTip?1:0;}
+  {const u=d.up&&typeof d.up==='object'?d.up:{};S.up={still:[0,1,2].map(i=>Array.isArray(u.still)&&u.still[i]?1:0),sec:(u.sec|0)&7,races:(u.races|0)&3,heron:u.heron?1:0,mira:u.mira?1:0,note:u.note?1:0,in:u.in?1:0,stillTip:u.stillTip?1:0,heronTip:u.heronTip?1:0,
+    jam:u.jam?1:0,serpent:u.serpent?1:0,act2:Math.max(0,Math.min(9,u.act2|0)),gorge:{rifle:u.gorge&&u.gorge.rifle?1:0}};S.boatTip=d.boatTip?1:0;}
   {const sp=d.spirits&&typeof d.spirits==='object'?d.spirits:{};S.spirits={cleared:Array.isArray(sp.cleared)?sp.cleared.filter(n=>Number.isInteger(n)&&n>=0&&n<64):[],left:{}};
    if(sp.left&&typeof sp.left==='object')for(const k in sp.left){const v=sp.left[k];if(/^\d+$/.test(k)&&Array.isArray(v))S.spirits.left[k]=v.filter(t=>t==='wisp'||t==='moth').slice(0,8);}}
   S.story=null;if(d.story&&typeof d.story==='object'){const t=d.story;S.story={f:{},seen:{},gate:!!t.gate,done:!!t.done,gc:!!t.gc,fest:Number.isFinite(t.fest)?t.fest|0:-1,pick:['a','b','c'].includes(t.pick)?t.pick:null};
@@ -3687,6 +3688,9 @@ const STORY_TEXT={
 const PIECES=[
   {id:'notice',t:'Kiyo\'s basket',w:'You arrived with it',x:'Kiyo\'s last request: "Take it home. Upriver." A worn reed basket, lopsided, older than you are. You have carried things in it all your life and never once looked closely at the rim.',g:''},
   {id:'marsh',t:'The still places',w:'The Upper Marsh',x:'Three places where the water had stopped: a bank where someone waited, a house with every clock stopped, a room kept exactly as it was. Mira says the still water keeps things. It kept them until something moved.',g:''},
+  {id:'lodge',t:'A crooked toy boat',w:'The Gorge · the hunting lodge',x:'On the lodge\'s shelf, a toy boat carved from pale wood, sitting a little crooked. The rifle on the pegs above it has a name burned into the stock: ISAMU.',g:'b'},
+  {id:'serpent',t:'The river\'s own',w:'The Gorge · the narrows',x:'Under the silt was only the river, long and clear and lit from inside. It had been carrying all of that, all the way down.',g:''},
+  {id:'lining',t:'Not yet',w:'Kiyo\'s basket · the lining',x:'Folded small inside the lining: THE MILL COTTAGE, free to anyone who will mend it. Typed, unsigned, addressed to the ferry house, Kawashita. On the back, in Kiyo\'s square hand, two words: Not yet.',g:'c'},
   {id:'heron',t:'A heron at dusk',w:'The Upper Marsh · the old post',x:'Kiyo said herons are ferrymen who forgot how to stop working. This one flew upriver, toward the gorge, as if it had somewhere to be.',g:'a'},
   {id:'lantern',t:'A soot-black lantern',w:'Mill Pond · in the flood debris',x:'The handle is a heron, its neck bent to hold the ring. The glass is cracked, but someone had trimmed the wick short, as if they meant to light it again.',g:'a'},
   {id:'gate',t:'Scratches on the gate wheel',w:'Mill Pond · the rebuilt sluice',x:'Knife marks gouged into the old sluice wheel, deep and hurried, and a date: 9 · VI. The wheel was turned by hand, from the gate itself.',g:'ac'},
@@ -4736,7 +4740,7 @@ function startGame(){
   setTimeout(()=>{$('hint').classList.add('gone');},30000);
   /* v13: a module (the Kawashita prologue) can take over the opening; then the usual arrival toasts wait for it */
   if(HOOKS.onStart.some(f=>f())){return;}
-  if(!sandbox&&(S.news|0)<15&&(S.kawa|0)===1&&!(MZ.kawa&&MZ.kawa.on)){const back=S.visitDays>1||stage()>0;const was=S.news|0;S.news=15;if(back)setTimeout(()=>toast(was<12?'The valley fights back now, and the Old Orchard has a story of its own. See What\'s new in your journal (J).':was<13?'Aoi looks like herself now, the pond has its creatures back, and new games begin downriver in Kawashita (Play the Kawashita prologue, on the title screen). See What\'s new (J).':was<14?'Kiyo\'s revolver works now, and Toma is on his way upriver. See What\'s new (J).':'Chapter 2 is open: once the Reedbeds boardwalk is mended, Toma\'s reed boat will take you up the marsh. See What\'s new (J).'),6500);}
+  if(!sandbox&&(S.news|0)<16&&(S.kawa|0)===1&&!(MZ.kawa&&MZ.kawa.on)){const back=S.visitDays>1||stage()>0;const was=S.news|0;S.news=16;if(back)setTimeout(()=>toast(was<12?'The valley fights back now, and the Old Orchard has a story of its own. See What\'s new in your journal (J).':was<13?'Aoi looks like herself now, the pond has its creatures back, and new games begin downriver in Kawashita (Play the Kawashita prologue, on the title screen). See What\'s new (J).':was<14?'Kiyo\'s revolver works now, and Toma is on his way upriver. See What\'s new (J).':was<15?'Chapter 2 is open: once the Reedbeds boardwalk is mended, Toma\'s reed boat will take you up the marsh. See What\'s new (J).':'The gorge above the marsh is open now, and something lives in it. See What\'s new (J).'),6500);}
   if(welcomeMsg)setTimeout(()=>toast(welcomeMsg),1800);
   else if(S.visitDays<=1&&S.gifts.length&&!sandbox)setTimeout(()=>toast('The flood left a few things on the shore. Look for the glints.'),2200);
   writeSave();
@@ -4829,7 +4833,7 @@ requestAnimationFrame(frame);
 /* ================================================================
    The shared context other modules use (combat now; co-op later)
    ================================================================ */
-export const MZ={THREE,HOOKS,waterU,GLSL:{NOISE:NOISE_GLSL,COMMON:COMMON_GLSL,OUT:OUT_GLSL},reedGeo,reedMat,prep,makeSightModel,SPECIES_BY_ID,brushTexture,rbStage,RB,RPATH,INLET,scene,camera,renderer,canvas,player,cam,S,keys,INTERACTS,piles,sluice,OUTLET,SLUICE_S,LEVELS,PARAMS,G,SFX,AU,
+export const MZ={THREE,HOOKS,waterU,GLSL:{NOISE:NOISE_GLSL,COMMON:COMMON_GLSL,OUT:OUT_GLSL},reedGeo,reedMat,prep,makeSightModel,SPECIES_BY_ID,brushTexture,rbStage,RB,RPATH,INLET,HOME,homeDist,STORY_TEXT,scene,camera,renderer,canvas,player,cam,S,keys,INTERACTS,piles,sluice,OUTLET,SLUICE_S,LEVELS,PARAMS,G,SFX,AU,
   fxSoft,fxGlow,hud,talk,photo,
   $,clamp,lerp,smooth,damp,rr,rnd,ease,angWrap,
   groundH,walkH,depthAt,polyPoint,polyInfo,makeToon,boxM,cylM,addOutline,toast,showCardBrief,startCine,after,sparkle,puff,addRipple,auSwell,

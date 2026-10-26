@@ -56,6 +56,9 @@ const MEM = {
   double: ['The farmhouse on the marsh kept it by the door for foxes, and fired it once a year at New Year, to wake the ducks.', 'The ducks came back every spring. The farmhouse didn\'t.'],
   machete: ['The reedcutters cleared the channels every autumn, singing the cutting song in two parts across the water.', 'One boat sang the question and the other sang the answer. There is nobody left to sing the answer.'],
   exarrow: ['Fire-arrows for the festival, wrapped in waxed reed and kept dry in the shrine under the willow.', 'One went up every summer, so the first boat would know where to go.'],
+  semi: ['The flood-watch rifle. One shot from the tower meant rising water.', 'The night of the flood the watchman fired it until his hands shook. The rain was louder.'],
+  bolt: ['The gorge ferryman kept it for the crows that stole his bait, and never once hit one.', 'He said he liked them too much to aim properly. They still sit on his cable in the evenings.'],
+  trap: ['Blasting caps from the quarry, packed in sawdust. The quarrymen cut the stone for the mill\'s gate here.', 'The last block they cut is still on the ledge, marked for a gate that was never rebuilt.'],
   bow: ['Mira\'s grandmother was the festival archer. Every summer she stood on the reed island and sent one lit arrow out over the water.', 'The first boat followed it home. Nobody has drawn this bow since the flood.'],
 };
 /* things that aren't held but change what is held */
@@ -537,7 +540,7 @@ function tomaPlace(force) {
     let bx = DOCK.g.position.x + 1.5, bz = DOCK.g.position.z - 5.5;
     for (let i = 0; i < 60 && MZ.depthAt(bx, bz) < 0.6; i++) { const l = Math.hypot(bx, bz) || 1; bx -= bx / l * 0.5; bz -= bz / l * 0.5; }
     reedBoat.position.set(bx, MZ.levelCur + 0.05, bz); reedBoat.rotation.set(0, 0.1, 0.05); if (MZ.boat) { MZ.boat.away = false; MZ.boat.x = reedBoat.position.x; MZ.boat.z = reedBoat.position.z; MZ.boat.yaw = 0.1; } }
-  if (toma) { toma.g.visible = true; toma.place(TOMA_AT.x, MZ.walkH(TOMA_AT.x, TOMA_AT.z), TOMA_AT.z, Math.atan2(BENCH.x - TOMA_AT.x, BENCH.z - TOMA_AT.z)); toma.P.hold = 0.7; toma.P.lean = 0.25; }
+  if (toma) { toma.g.visible = !ar().have.toma_gone && !A.tomaAway; toma.place(TOMA_AT.x, MZ.walkH(TOMA_AT.x, TOMA_AT.z), TOMA_AT.z, Math.atan2(BENCH.x - TOMA_AT.x, BENCH.z - TOMA_AT.z)); toma.P.hold = 0.7; toma.P.lean = 0.25; }   /* Act 2: once she sends him home, he's gone (js/act2.js) */
 }
 async function tomaLoad() { if (toma) return toma; try { toma = await loadCast('toma'); } catch (e) { console.warn('toma', e); } return toma; }
 const TOMA_LINES = [
@@ -569,9 +572,9 @@ async function tomaArrival() {
   showCardBrief({ k: 'Mill Pond · the old dock', t: 'Toma\'s bench', s: 'Upgrades for what you carry, and a fresh satchel of throwables. He gave you his hammer, and his signal kit.' });
   setTimeout(() => toast('Hold E at Toma\'s bench to upgrade. 1 to 6 choose what you hold.'), 5200);
 }
-spot({ x: BENCH.x, z: BENCH.z, r: 2.4, state() { if (!ar().have.toma_bench) return null; return { ok: true, text: 'Toma\'s bench · upgrades', hold: 0.5 }; }, done() { openBench(); }, pos: () => _ip.set(BENCH.x, groundH(BENCH.x, BENCH.z) + 1.3, BENCH.z) });
+spot({ x: BENCH.x, z: BENCH.z, r: 2.4, state() { if (!ar().have.toma_bench || A.benchBusy) return null; return { ok: true, text: ar().have.toma_gone ? 'Toma\'s bench · he left it oiled' : 'Toma\'s bench · upgrades', hold: 0.5 }; }, done() { openBench(); }, pos: () => _ip.set(BENCH.x, groundH(BENCH.x, BENCH.z) + 1.3, BENCH.z) });
 let tomaLine = 0;
-spot({ x: TOMA_AT.x, z: TOMA_AT.z, r: 2.6, pen: 0.3, state() { if (!ar().have.toma_bench || !toma) return null; return { ok: true, text: 'Talk to Toma', hold: 0.2 }; }, done() {
+spot({ x: TOMA_AT.x, z: TOMA_AT.z, r: 2.6, pen: 0.3, state() { if (!ar().have.toma_bench || !toma || ar().have.toma_gone || A.benchBusy || !toma.g.visible) return null; return { ok: true, text: 'Talk to Toma', hold: 0.2 }; }, done() {
   const L = TOMA_LINES[tomaLine++ % TOMA_LINES.length]; if (toma) toma.P.look = player.pos.clone().add(new THREE.Vector3(0, 1.5, 0));
   MZ.talkRun(L.map(([who, text]) => ({ who, text })), () => { if (toma) toma.P.look = null; }); }, pos: () => _ip.set(TOMA_AT.x, groundH(TOMA_AT.x, TOMA_AT.z) + 2.0, TOMA_AT.z) });
 HOOKS.sim.push((dt) => {
@@ -624,5 +627,6 @@ setTimeout(() => {
 }, 0);
 /* the prologue's ferry box gave the revolver; it also held her net knife */
 HOOKS.sim.push(() => { const a = ar(); if (a.have.revolver && !a.have.knife) { a.have.knife = 1; } });
-A.loose = loose; A.memory = memory; A.closeBench = closeBench; A.reedBoat = reedBoat; A.tomaPlace = tomaPlace;
+A.loose = loose; A.memory = memory; A.closeBench = closeBench; A.reedBoat = reedBoat; A.tomaPlace = tomaPlace; A.MEM = MEM;
+A.tomaCast = () => toma; A.TOMA_AT = TOMA_AT; A.BENCH = BENCH;
 A.equip = equip; A.pick = pick; A.fire = fire; A.reload = reload; A.WEAP = WEAP; A.stat = stat; A.tomaArrival = tomaArrival; A.openBench = openBench; A.effectAt = effectAt;

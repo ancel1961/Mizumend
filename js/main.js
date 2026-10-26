@@ -7,5 +7,7 @@ import './kawashita.js';
 import './arsenal.js';
 import './boat.js';
 import './upriver.js';
+import './gorge.js';
+import './act2.js';
 import './hero.js';
 import './wildlife.js';

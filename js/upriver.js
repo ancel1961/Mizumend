@@ -20,7 +20,7 @@ const { HOOKS, scene, camera, player, cam, S, PARAMS, makeToon, addOutline, clam
 
 const UZ = 3000;
 const TAU = Math.PI * 2;
-const U = { on: false, built: false, gen: 0, root: new THREE.Group(), still: [], race: null, flowK: 1, area: 'The Upper Marsh', tasks: [] };
+const U = { on: false, built: false, gen: 0, root: new THREE.Group(), still: [], race: null, flowK: 1, area: 'The Upper Marsh', tasks: [], onBuild: [], spots: {}, onSim: [], areaExt: null, tasksExt: null };
 MZ.up = U;
 if (PARAMS.debug === '1' || PARAMS.debug === 'true') window.__mzu = U;
 const B = () => MZ.boat;
@@ -36,7 +36,7 @@ let seed = 7; const srnd = () => { seed = (seed * 16807) % 2147483647; return se
 const srr = (a, b) => a + (b - a) * srnd();
 
 /* ---------- the river: a smooth line from the landing up to the narrows ---------- */
-const CTRL = [[0, -40], [0, -8], [3, 24], [14, 62], [8, 100], [-18, 134], [-34, 172], [-22, 210], [8, 238], [36, 272], [40, 312], [20, 346], [-4, 376], [-14, 410], [-8, 440], [4, 470], [8, 505], [2, 540]];
+const CTRL = [[0, -40], [0, -8], [3, 24], [14, 62], [8, 100], [-18, 134], [-34, 172], [-22, 210], [8, 238], [36, 272], [40, 312], [20, 346], [-4, 376], [-14, 410], [-8, 440], [4, 470], [8, 505], [2, 540], [-6, 575], [4, 612], [20, 650], [14, 692], [-8, 730], [-14, 770], [0, 806], [10, 842], [6, 870]];
 function catmull(pts, step) {
   const out = [];
   for (let i = 0; i < pts.length - 1; i++) {
@@ -66,7 +66,7 @@ const gk = (s) => sm(S0 + 380, S0 + 430, s);
 const hwAt = (s) => lerp(10.5 + 3 * Math.sin(s * 0.031) + 1.8 * Math.sin(s * 0.013 + 1.0), 5.6 + 0.5 * Math.sin(s * 0.05), gk(s));
 const depthAt = (s) => lerp(1.35, 2.3, gk(s));
 const slopeAt = (s) => lerp(0.24, 1.7, gk(s));
-const flowSpd = (s) => lerp(0.2, 0.75, gk(s)) * (s < S0 + 12 ? 1.8 : 1);
+const flowSpd = (s) => lerp(0.2, 0.75 + 0.35 * Math.sin(s * 0.045) ** 2, gk(s)) * (s < S0 + 12 ? 1.8 : 1) * (s > MAIN.L - 30 ? sm(MAIN.L, MAIN.L - 30, s) : 1);
 function P(s, lat = 0) { const p = lineAt(MAIN, s); return { u: p.u + p.nx * lat, w: p.w + p.nz * lat, tx: p.tx, tz: p.tz, nx: p.nx, nz: p.nz }; }
 function Pf(s, f) { return P(s, f * hwAt(s)); }
 
@@ -86,6 +86,12 @@ for (const sd of SIDES) { const e = sd.line.pts[sd.line.pts.length - 1]; sd.pu =
 const STILL = [S0 + 92, S0 + 206, S0 + 322].map((s, i) => { const p = Pf(s, [0.2, -0.15, 0.1][i]); return { s, u: p.u, w: p.w, r: 10 }; });
 const LANDING = (() => { const p = P(S0 + 14); const side = 1; const hw = hwAt(S0 + 14); return { u: p.u + p.nx * side * (hw + 1.0), w: p.w + p.nz * side * (hw + 1.0), nx: p.nx * side, nz: p.nz * side, tx: p.tx, tz: p.tz, boat: { u: p.u + p.nx * side * (hw - 2.2), w: p.w + p.nz * side * (hw - 2.2) } }; })();
 const HERON = (() => { const s = S0 + 284, hw = hwAt(s); const p = P(s, -(hw - 3.6)); return { s, u: p.u, w: p.w }; })();
+/* the gorge (v13.4): gravel bars against the walls where a boat can put in, the deep pool under the falls at the top,
+   and the ledge above it where the lodge stands */
+const BARS = [{ id: 'tower', s: S0 + 486, side: -1, r: 5.6 }, { id: 'ferry', s: S0 + 606, side: 1, r: 5.2 }, { id: 'quarry', s: S0 + 716, side: -1, r: 5.8 }].map((b) => { const hw = hwAt(b.s); const p = P(b.s, b.side * (hw - 0.6)); return { ...b, u: p.u, w: p.w, nx: p.nx * b.side, nz: p.nz * b.side, tx: p.tx, tz: p.tz }; });
+const POOL = (() => { const e = lineAt(MAIN, MAIN.L); const R = 13; const c = { u: e.u + e.tx * 7, w: e.w + e.tz * 7 }; return { u: c.u, w: c.w, R, tx: e.tx, tz: e.tz, nx: e.nx, nz: e.nz,
+  beach: { u: c.u + e.nx * (R - 2.2) - e.tx * 7, w: c.w + e.nz * (R - 2.2) - e.tz * 7, r: 4.6 }, fall: { u: c.u + e.tx * (R + 1.0), w: c.w + e.tz * (R + 1.0) } }; })();
+const LEDGE = { u: POOL.u + POOL.nx * (POOL.R + 4.2) + POOL.tx * 2, w: POOL.w + POOL.nz * (POOL.R + 4.2) + POOL.tz * 2, y: 7.2, hx: 4.6, hz: 5.0, ang: Math.atan2(POOL.tx, POOL.tz) };
 const NARROWS = (() => { const p = P(S0 + 448); return { s: S0 + 448, u: p.u, w: p.w, tx: p.tx, tz: p.tz, nx: p.nx, nz: p.nz }; })();
 
 /* ---------- the ground: a grid, built once (1 m cells) ---------- */
@@ -93,7 +99,7 @@ const GR = { u0: 0, w0: 0, nu: 0, nw: 0, h: null, s: null, d: null, ds: null };
 function buildGrid() {
   let u0 = 1e9, u1 = -1e9, w0 = 1e9, w1 = -1e9;
   for (const [u, w] of MAIN.pts) { u0 = Math.min(u0, u); u1 = Math.max(u1, u); w0 = Math.min(w0, w); w1 = Math.max(w1, w); }
-  const M = 95; u0 = Math.floor(u0 - M); u1 = Math.ceil(u1 + M); w0 = Math.floor(w0 - 20); w1 = Math.ceil(w1 + 40);
+  const M = 95; u0 = Math.floor(u0 - M); u1 = Math.ceil(u1 + M); w0 = Math.floor(w0 - 20); w1 = Math.ceil(w1 + 60);
   const nu = u1 - u0 + 1, nw = w1 - w0 + 1, N = nu * nw;
   const D = new Float32Array(N).fill(1e9), SS = new Float32Array(N), DS = new Float32Array(N).fill(1e9), SI = new Int8Array(N).fill(-1);
   const raster = (line, R, Dd, Ss, idx) => {
@@ -125,6 +131,12 @@ function buildGrid() {
     if (si >= 0) { const sd = SIDES[si], ds = DS[c]; const cs = ds < sd.hw ? -1.0 * (1 - (ds / sd.hw) ** 2) : (ds - sd.hw) * 0.3; h = Math.min(h, cs);
       const dp = Math.hypot(u - sd.pu, w - sd.pw); const cp = dp < sd.pool ? -1.25 * (1 - (dp / sd.pool) ** 2) : (dp - sd.pool) * 0.28; h = Math.min(h, cp); }
     for (const is of ISL) { const di = Math.hypot(u - is.u, w - is.w); if (di < is.r * 1.3) h = Math.max(h, 0.42 + 0.15 * vn(u * 0.5, w * 0.5) - 1.7 * (di / is.r) ** 2); }
+    /* the gorge: the deep pool, its beach, the bars, the lodge's ledge */
+    { const dp = Math.hypot(u - POOL.u, w - POOL.w); if (dp < POOL.R + 30) { const cp = dp < POOL.R ? -3.0 * (1 - (dp / POOL.R) ** 2) : (dp - POOL.R) * 1.9; h = Math.min(h, cp); } }
+    { const b = POOL.beach, db = Math.hypot(u - b.u, w - b.w); if (db < b.r * 1.3) h = Math.max(h, 0.32 - 1.3 * (db / b.r) ** 2); }
+    for (const b of BARS) { const db = Math.hypot(u - b.u, w - b.w); if (db < b.r * 1.3) h = Math.max(h, 0.34 + 0.08 * vn(u * 0.6, w * 0.6) - 1.2 * (db / b.r) ** 2); }
+    { const lu = (u - LEDGE.u) * Math.cos(LEDGE.ang) - (w - LEDGE.w) * Math.sin(LEDGE.ang), lw = (u - LEDGE.u) * Math.sin(LEDGE.ang) + (w - LEDGE.w) * Math.cos(LEDGE.ang);
+      if (Math.abs(lu) < LEDGE.hx && Math.abs(lw) < LEDGE.hz) h = LEDGE.y; }
     H[c] = h;
   }
   Object.assign(GR, { u0, w0, nu, nw, h: H, s: SS, d: D, ds: DS, si: SI });
@@ -191,6 +203,7 @@ function build() {
   buildTerrain(); buildWater(); buildReeds(); buildLilies();
   buildTrees(stat); buildLanding(stat); buildNarrows(stat); buildSecrets(stat); buildHeronPost(stat);
   buildStill(); buildMira();
+  for (const f of U.onBuild) f(stat);
   MZ.bakeStatic?.(stat);
   U.root.traverse((o) => o.layers.enable(2));
 }
@@ -405,8 +418,9 @@ function buildLanding(g) {
   const po = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.3, 5), MT.woodDk); po.position.y = 0.65; sg.add(po);
   const bd = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.24, 0.05), MT.plank); bd.position.y = 1.1; sg.add(bd); addOutline(bd, 0.01);
 }
-function buildNarrows(g) {
-  /* flood timber, jammed across the narrows from wall to wall */
+function buildNarrows(g0) {
+  /* flood timber, jammed across the narrows from wall to wall (its own group: it goes when Toma and Aoi shift it) */
+  const g = new THREE.Group(); U.root.add(g); U.jam = g; g.visible = !up().jam;
   const N = NARROWS, hw = hwAt(N.s) + 1.5;
   for (let i = 0; i < 26; i++) { const l = new THREE.Mesh(new THREE.CylinderGeometry(srr(0.16, 0.3), srr(0.18, 0.32), srr(4, 8), 7), MT.bark);
     const lat = srr(-hw, hw), al = srr(-2.2, 2.2);
@@ -414,7 +428,8 @@ function buildNarrows(g) {
     l.rotation.set(srr(-0.4, 0.4), Math.atan2(N.nx, N.nz) + srr(-0.6, 0.6), Math.PI / 2 + srr(-0.3, 0.3)); l.castShadow = true; g.add(l); }
   for (let i = 0; i < 10; i++) { const r = new THREE.Mesh(new THREE.DodecahedronGeometry(srr(0.4, 0.9)), MT.rock); const lat = srr(-hw, hw);
     r.position.set(N.u + N.nx * lat + N.tx * srr(-3, 3), srr(-0.3, 0.3), UZ + N.w + N.nz * lat + N.tz * srr(-3, 3)); r.castShadow = true; g.add(r); }
-  B()?.blockers.push((x, z) => { if (z < 2000) return false; const du = x - N.u, dw = z - UZ - N.w; return Math.abs(du * N.tx + dw * N.tz) < 3.2 && Math.abs(du * N.nx + dw * N.nz) < hw + 2; });
+  B()?.blockers.push((x, z) => { if (z < 2000 || up().jam) return false; const du = x - N.u, dw = z - UZ - N.w; return Math.abs(du * N.tx + dw * N.tz) < 3.2 && Math.abs(du * N.nx + dw * N.nz) < hw + 2; });
+  g.children.forEach((l) => { l.userData.p0 = l.position.clone(); l.userData.r0 = l.rotation.clone(); });
 }
 /* the three secrets */
 const SEC = [];
@@ -813,9 +828,9 @@ function safe() { const p = P(S0 + 18), hw = hwAt(S0 + 18); return { x: LANDING.
 function tp(where = 'landing', opts = {}) {
   const b = B();
   const at = (s, f = 0) => { const p = Pf(s, f); return { x: p.u, z: UZ + p.w, yaw: Math.atan2(p.tx, p.tz) }; };
-  const spots = { landing: at(S0 + 12, 0.45), still1: at(STILL[0].s - 26, 0), still2: at(STILL[1].s - 26, 0), still3: at(STILL[2].s - 26, 0), heron: at(HERON.s - 30, 0), narrows: at(NARROWS.s - 22, 0), gorge: at(NARROWS.s - 22, 0),
+  const spots = { landing: at(S0 + 12, 0.45), still1: at(STILL[0].s - 26, 0), still2: at(STILL[1].s - 26, 0), still3: at(STILL[2].s - 26, 0), heron: at(HERON.s - 30, 0), narrows: at(NARROWS.s - 22, 0), gorge: up().jam ? at(NARROWS.s + 12, 0) : at(NARROWS.s - 22, 0),
     farm: { x: SIDES[0].pu - 4, z: UZ + SIDES[0].pw - 4, yaw: 0.5 }, shrine: { x: SIDES[1].pu - 3, z: UZ + SIDES[1].pw - 3, yaw: 0.8 }, hut: { x: SIDES[2].pu, z: UZ + SIDES[2].pw + 5, yaw: Math.PI } };
-  const s = spots[where] || spots.landing;
+  const ext = U.spots[where]; const s = (ext ? ext() : null) || spots[where] || spots.landing;
   if (opts.onFoot) { player.pos.set(LANDING.u, MZ.walkH(LANDING.u, UZ + LANDING.w), UZ + LANDING.w); player.vel.set(0, 0, 0); b?.place(LANDING.boat.u, UZ + LANDING.boat.w, Math.atan2(LANDING.tx, LANDING.tz)); }
   else if (b) b.respawn(s.x, s.z, s.yaw);
   cam.yaw = s.yaw + Math.PI; cam.target.set(player.pos.x, player.pos.y + 1.25, player.pos.z);
@@ -844,7 +859,7 @@ function regOnce() {
     done() { if (!MIRA.met) { miraIntro(); return; } const b = B(); if (!b?.on) { MZ.talkRun([{ who: 'Mira', text: 'Get in your boat, then. I can\'t race a person standing on a dock.' }]); return; } startRace((up().races & 1) ? 1 : 0); },
     pos: () => _ip.set(MIRA.x, 1.3, MIRA.z) });
   /* the narrows */
-  INTERACTS.push({ x: NARROWS.u, z: UZ + NARROWS.w, r: 9, pen: 0.4, state() { if (!U.on) return null; return { ok: false, text: up().still.every(Boolean) ? 'The narrows · the timber is shifting. The gorge is next (the next update)' : 'The narrows · flood timber, jammed solid. The marsh is holding its breath' }; },
+  INTERACTS.push({ x: NARROWS.u, z: UZ + NARROWS.w, r: 9, pen: 0.4, state() { if (!U.on || up().jam || U.jamScene) return null; return { ok: false, text: up().still.every(Boolean) ? 'The narrows · the timber is shifting. Someone could find the key log' : 'The narrows · flood timber, jammed solid. The marsh is holding its breath' }; },
     done() {}, pos: () => _ip.set(NARROWS.u, 2.2, UZ + NARROWS.w) });
 }
 function miraIntro() {
@@ -858,6 +873,7 @@ function miraIntro() {
 /* ---------- per frame ---------- */
 HOOKS.sim.push((dt) => {
   if (!U.on) return;
+  for (const f of U.onSim) f(dt);
   stillStep(dt); raceStep(dt); heronStep(dt); if (!U.race) { MIRA.v = 0; if (Math.hypot(MIRA.x - MIRA.home.x, MIRA.z - MIRA.home.z) > 0.5) { MIRA.x = damp(MIRA.x, MIRA.home.x, 0.5, dt); MIRA.z = damp(MIRA.z, MIRA.home.z, 0.5, dt); } }
   /* first time up: Mira paddles over */
   if (!MIRA.met && !up().mira && !MZ.talk.on && !MZ.cine && Math.hypot(player.pos.x - MIRA.x, player.pos.z - MIRA.z) < 14 && MZ.simTime > (U.introT || 0)) { U.introT = MZ.simTime + 1e9; setTimeout(miraIntro, 600); }
@@ -883,12 +899,13 @@ HOOKS.vis.push((dt) => {
 });
 /* the HUD's place name and progress, while she's up here */
 HOOKS.area = () => {
-  if (!U.on) return null; const u = up(); const n = u.still.filter(Boolean).length, sc = [0, 1, 2].filter((k) => u.sec & (1 << k)).length, rc = (u.races & 1 ? 1 : 0) + (u.races & 2 ? 1 : 0);
+  if (!U.on) return null; if (U.areaExt) { const a = U.areaExt(); if (a) return a; }
+  const u = up(); const n = u.still.filter(Boolean).length, sc = [0, 1, 2].filter((k) => u.sec & (1 << k)).length, rc = (u.races & 1 ? 1 : 0) + (u.races & 2 ? 1 : 0);
   const pct = Math.round((n * 3 + sc + rc + (u.heron ? 1 : 0)) / 15 * 100);
   return { name: U.area, pct, unit: 'moving again' };
 };
 HOOKS.tasksUp = () => {
-  if (!U.on) return null; const u = up(); const out = []; const n = u.still.filter(Boolean).length;
+  if (!U.on) return null; if (U.tasksExt) { const t = U.tasksExt(); if (t) return t; } const u = up(); const out = []; const n = u.still.filter(Boolean).length;
   const near = U.still.filter((sp) => !sp.mended).sort((a, b) => Math.hypot(a.x - player.pos.x, a.z - player.pos.z) - Math.hypot(b.x - player.pos.x, b.z - player.pos.z))[0];
   if (n < 3 && near) out.push({ main: true, text: `Free the still water (${n} of 3)`, x: near.x, z: near.z });
   if ((u.races & 3) !== 3) out.push({ text: (u.races & 1) ? 'Race Mira the long way' : 'Race Mira', x: MIRA.home.x, z: MIRA.home.z });
@@ -929,7 +946,9 @@ HOOKS.sim.push(() => {
 /* a returning game that was up here when it closed comes back up here */
 HOOKS.onStart.push(() => {
   const tpp = (PARAMS.tp || '').toLowerCase();
-  if (tpp === 'reedbeds' || tpp === 'marsh' || tpp === 'gorge') { if (!S.arsenal.have.toma_bench) S.arsenal.have.toma_bench = 1; setTimeout(() => enter(tpp === 'gorge' ? 'narrows' : 'landing'), 50); return false; }
+  if (tpp === 'reedbeds' || tpp === 'marsh' || tpp === 'gorge' || tpp === 'narrows' || tpp === 'lodge' || tpp === 'deep') { if (!S.arsenal.have.toma_bench) S.arsenal.have.toma_bench = 1;
+    if (tpp !== 'reedbeds' && tpp !== 'marsh' && tpp !== 'narrows') up().jam = 1;            /* the debug way into the gorge: the timber's already gone */
+    setTimeout(() => enter(tpp === 'reedbeds' || tpp === 'marsh' ? 'landing' : tpp), 50); return false; }
   if (up().in && !MZ.sandbox) { setTimeout(() => enter('landing'), 50); return false; }
   return false;
 });
@@ -941,5 +960,6 @@ U.heron = () => { S.hours = 18.5; HR.state = 'away'; up().heron = 0; };
 U.secret = (i) => secretGive(i);
 /* the combat debug object (window.__mzc) gets the new enemy too: __mzc.spawnStill(0..2) takes her up there if she isn't */
 if (MZ.combat) MZ.combat.spawnStill = (i = 0) => { if (!U.on) enter(['still1', 'still2', 'still3'][i] || 'still1'); return U.spawnStill(i); };
+Object.assign(U, { save: up, Pf, hwAt, gk, lineAt, MAIN, UZ, deck, lantern, tree, COLL, DECKS, MT, tn, srr, BARS, POOL, LEDGE, NARROWS, sm, vn, fbm, smallBoat });
 U.SEC = SEC; U.STILL = STILL; U.MIRA = MIRA; U.LANDING = LANDING; U.HERONP = HERON; U.SIDES = SIDES; U.P = P; U.S0 = S0;
 export { U };
